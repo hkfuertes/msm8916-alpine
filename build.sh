@@ -1,7 +1,7 @@
 #!/bin/sh -e
 
-echo "Install dependencies\n"
-scripts/install_deps.sh
+# echo "Install dependencies\n"
+# scripts/install_deps.sh
 
 echo "\nBuild hyp and aboot firmware\n"
 scripts/build_hyp_aboot.sh

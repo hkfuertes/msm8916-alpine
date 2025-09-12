@@ -1,11 +1,14 @@
 #!/bin/sh -e
 
 export CHROOT=${CHROOT=$(pwd)/rootfs}
-export HOST_NAME=${HOST_NAME=openstick-alpine}
+export HOST_NAME=${HOST_NAME=uz801a}
 export RELEASE=${RELEASE=v3.20}
 export PMOS_RELEASE=${PMOS_RELEASE=v24.06}
 export MIRROR=${MIRROR=http://dl-cdn.alpinelinux.org/alpine}
 export PMOS_MIRROR=${PMOS_MIRROR=http://mirror.postmarketos.org/postmarketos}
+
+export USERNAME=${USERNAME=user}
+export PASSWROD=${PASSWROD=1}
 
 rm -rf ${CHROOT}
 
@@ -21,7 +24,7 @@ cp /etc/resolv.conf ${CHROOT}/etc/
 mkdir -p ${CHROOT}/usr/bin
 cp $(which qemu-aarch64-static) ${CHROOT}/usr/bin
 
-wget https://gitlab.alpinelinux.org/api/v4/projects/5/packages/generic/v2.12.14/x86_64/apk.static
+wget https://gitlab.alpinelinux.org/api/v4/projects/5/packages/generic/v2.14.6/x86_64/apk.static
 chmod a+x apk.static
 
 ./apk.static add -p ${CHROOT} --initdb -U --arch aarch64 --allow-untrusted alpine-base
@@ -35,7 +38,6 @@ apk add --no-cache \
     chrony \
     dropbear \
     eudev \
-    gadget-tool \
     iptables \
     linux-postmarketos-qcom-msm8916 \
     modemmanager \
@@ -57,7 +59,7 @@ apk add --no-cache \
 "
 # setup alpine
 chroot ${CHROOT} ash -l -c "
-echo user:1::::/home/user:/bin/ash | newusers
+echo ${USERNAME}:${PASSWORD}::::/home/$USERNAME:/bin/ash | newusers
 apk del shadow
 
 rc-update add devfs sysinit
@@ -79,7 +81,7 @@ rc-update add rmtfs default
 rc-update add modemmanager default
 rc-update add networkmanager default
 "
-echo 'user ALL=(ALL:ALL) NOPASSWD: ALL' > ${CHROOT}/etc/sudoers.d/user
+echo "${USERNAME} ALL=(ALL:ALL) NOPASSWD: ALL" > ${CHROOT}/etc/sudoers.d/${USERNAME}
 
 # add udev rules
 cat << EOF > ${CHROOT}/etc/udev/rules.d/10-udc.rules
@@ -111,8 +113,9 @@ cp dtbs/* ${CHROOT}/boot/dtbs/qcom
 # update fstab
 echo "/dev/mmcblk0p14\t/boot\text2\tdefaults\t0 2" > ${CHROOT}/etc/fstab
 
-# copy gadget-tool templates
-cp -a configs/templates ${CHROOT}/etc/gt
+# add MSM8916 USB gadget
+cp -a configs/msm8916-usb-gadget.sh ${CHROOT}/usr/sbin/
+cp configs/msm8916-usb-gadget.conf ${CHROOT}/etc/
 
 # backup rootfs
 tar cpzf alpine_rootfs.tgz \
