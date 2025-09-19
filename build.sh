@@ -18,5 +18,5 @@ scripts/build_images.sh
 echo "\nCopying flasher\n"
 cp ./flash.sh files
 
-echo "\Changing permissions on files folder\n"
+echo "\nChanging permissions on files folder\n"
 chmod 777 -R files
