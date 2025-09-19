@@ -115,6 +115,9 @@ echo "/dev/mmcblk0p14\t/boot\text2\tdefaults\t0 2" > ${CHROOT}/etc/fstab
 
 # add MSM8916 USB gadget
 cp -a configs/msm8916-usb-gadget.sh ${CHROOT}/usr/sbin/
+chmod +x ${CHROOT}/usr/sbin/msm8916-usb-gadget.sh
+cp -a configs/msm8916-usb-gadget.init ${CHROOT}/etc/init.d/msm8916-usb-gadget
+chmod +x ${CHROOT}/etc/init.d/msm8916-usb-gadget
 cp configs/msm8916-usb-gadget.conf ${CHROOT}/etc/
 
 # backup rootfs

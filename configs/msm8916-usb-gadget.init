@@ -1,0 +1,64 @@
+#!/sbin/openrc-run
+# MSM8916 USB Gadget OpenRC service script
+# Compatible with Alpine Linux / PostmarketOS
+
+name="msm8916-usb-gadget"
+description="MSM8916 USB Gadget configuration service"
+
+command="/usr/sbin/msm8916-usb-gadget.sh"
+pidfile="/run/${RC_SVCNAME}.pid"
+
+depend() {
+    need localmount
+    after modules
+    after net
+    before networkmanager
+    keyword -docker -lxc -openvz -prefix -systemd-nspawn -uml -vserver -xenu
+}
+
+checkconfig() {
+    if [ ! -x "${command}" ]; then
+        eerror "${command} not found or not executable"
+        return 1
+    fi
+    
+    if [ ! -d "/sys/kernel/config" ] && ! modprobe configfs; then
+        eerror "ConfigFS support not available in kernel"
+        return 1
+    fi
+    
+    if [ ! -d "/sys/class/udc" ]; then
+        eerror "USB Device Controller (UDC) not available"
+        return 1
+    fi
+    
+    return 0
+}
+
+start_pre() {
+    checkconfig || return 1
+}
+
+start() {
+    ebegin "Starting ${name}"
+    ${command} start
+    eend $?
+}
+
+stop() {
+    ebegin "Stopping ${name}"
+    ${command} stop
+    eend $?
+}
+
+status() {
+    ebegin "Checking ${name} status"
+    ${command} status
+    eend $?
+}
+
+restart() {
+    ebegin "Restarting ${name}"
+    ${command} restart
+    eend $?
+}
