@@ -134,16 +134,26 @@ cp configs/*.nmconnection "$CHROOT/etc/NetworkManager/system-connections/" 2>/de
 chmod 0600 "$CHROOT/etc/NetworkManager/system-connections/"* 2>/dev/null || true
 sed -i '/\[main\]/a dns=dnsmasq' "$CHROOT/etc/NetworkManager/NetworkManager.conf"
 
-# Extlinux
-mkdir -p "$CHROOT/boot/extlinux"
-cp configs/extlinux.conf "$CHROOT/boot/extlinux/" 2>/dev/null || true
-
 # Custom DTBs
 mkdir -p "$CHROOT/boot/dtbs/qcom"
 cp dtbs/* "$CHROOT/boot/dtbs/qcom/" 2>/dev/null || true
 
-# Fstab
-echo "/dev/mmcblk0p14	/boot	ext2	defaults	0 2" > "$CHROOT/etc/fstab"
+mkdir -p "$CHROOT/boot/extlinux"
+cat > "$CHROOT/boot/extlinux/extlinux.conf" <<EOF
+TIMEOUT 10
+DEFAULT alpine
+
+LABEL alpine
+    MENU LABEL Alpine Linux
+    linux /vmlinuz
+    fdt /dtbs/qcom/msm8916-generic-uf02.dtb
+    append earlycon root=/dev/mmcblk0p14 console=ttyMSM0,115200 no_framebuffer=true rw rootwait
+EOF
+
+cat > "$CHROOT/etc/fstab" <<EOF
+/dev/mmcblk0p13    /boot    ext2    defaults    0 2
+/dev/mmcblk0p14    /        ext4    defaults    0 1
+EOF
 
 # USB gadget
 install -Dm0755 configs/msm8916-usb-gadget.sh "$CHROOT/usr/sbin/msm8916-usb-gadget.sh"

@@ -2,6 +2,8 @@ FROM debian:bookworm
 
 RUN apt update
 RUN apt install -y \
+    git \
+    zip \
     android-sdk-libsparse-utils \
     autoconf \
     automake \

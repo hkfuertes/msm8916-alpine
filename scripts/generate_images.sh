@@ -12,13 +12,13 @@ ROOT_RAW="$STAGING/rootfs.raw"
 trap 'rm -rf "$STAGING"' EXIT INT TERM
 
 # Sizes (adjustable)
-BOOT_SIZE_MIB="${BOOT_SIZE_MIB:=64}"        # 64 MiB
-ROOT_SIZE_MIB="${ROOT_SIZE_MIB:=1536}"      # 1.5 GiB
+BOOT_SIZE_MIB="${BOOT_SIZE_MIB:=64}"
+ROOT_SIZE_MIB="${ROOT_SIZE_MIB:=1536}"
 
 # Requirements
 command -v img2simg >/dev/null || { echo "Falta img2simg"; exit 1; }
 [ -d "$OUT_DIR" ] || { echo "No existe directorio: $OUT_DIR"; exit 1; }
-[ -f "$ROOTFS_TAR" ] || { echo "No existe $ROOTFS_TAR - ejecuta generate_alpine.sh primero"; exit 1; }
+[ -f "$ROOTFS_TAR" ] || { echo "No existe $ROOTFS_TAR"; exit 1; }
 
 echo "[*] Output directory: $OUT_DIR"
 echo "[*] Temporary staging: $STAGING"
@@ -34,7 +34,15 @@ mkfs.ext2 -F "$BOOT_RAW" >/dev/null 2>&1
 mount -o loop "$BOOT_RAW" "$STAGING/mnt"
 
 echo "[*] Extracting boot files..."
-tar xf "$ROOTFS_TAR" -C "$STAGING/mnt" ./boot --exclude='./boot/linux.efi' --strip-components=2 2>/dev/null || true
+# CRÍTICO: strip-components=2 para dejar archivos en raíz de boot partition
+tar xf "$ROOTFS_TAR" -C "$STAGING/mnt" \
+    ./boot \
+    --exclude='./boot/linux.efi' \
+    --strip-components=2 \
+    2>/dev/null || true
+
+echo "[*] Boot partition contents:"
+ls -lhR "$STAGING/mnt/" | head -30
 
 umount "$STAGING/mnt"
 

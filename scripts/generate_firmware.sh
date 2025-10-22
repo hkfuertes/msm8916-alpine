@@ -28,7 +28,6 @@ echo "[+] Checking toolchains..."
 for cmd in "${AARCH64_CC}" "${AARCH64_AS}" "${ARM_CROSS}gcc" git make python3 wget unzip zip; do
   if ! command -v "$cmd" >/dev/null 2>&1; then
     echo "[!] Error: $cmd not found in PATH"
-    echo "[!] Install with: pacman -S arm-none-eabi-gcc aarch64-linux-gnu-gcc base-devel git python wget unzip zip"
     exit 1
   fi
 done
@@ -75,7 +74,7 @@ if [ ! -f "$BUILDDIR/lk2nd/build-lk1st-msm8916/emmc_appsboot.mbn" ]; then
     make clean || true
     make \
       LK2ND_BUNDLE_DTB="msm8916-512mb-mtp.dtb" \
-      LK2ND_COMPATIBLE="yiming,uz801-v3" \
+      LK2ND_COMPATIBLE="generic,uf02" \
       TOOLCHAIN_PREFIX="$ARM_CROSS" \
       lk1st-msm8916
   )
