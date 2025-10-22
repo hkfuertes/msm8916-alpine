@@ -10,7 +10,8 @@ stp=false
 
 [ipv4]
 method=manual
-address1=192.168.4.1/24
+address1=192.168.5.1/24
+dns=8.8.8.8;8.8.4.4;
 
 [ipv6]
 addr-gen-mode=default

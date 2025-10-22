@@ -163,6 +163,16 @@ install -Dm0644 configs/msm8916-usb-gadget.conf "$CHROOT/etc/msm8916-usb-gadget.
 # Enable USB gadget service
 chroot "$CHROOT" ash -l -c "rc-update add msm8916-usb-gadget default" || true
 
+# DHCP config
+mkdir -p "$CHROOT/etc/dnsmasq.d"
+cp configs/dhcp.conf "$CHROOT/etc/dnsmasq.d/dhcp.conf"
+cp configs/dnsmasq-main.conf "$CHROOT/etc/dnsmasq.conf"
+
+# NetworkManager DNS config
+mkdir -p "$CHROOT/etc/NetworkManager/conf.d"
+cp configs/99-custom.conf "$CHROOT/etc/NetworkManager/conf.d/"
+
+
 # Create tarball
 echo "[*] Creating tarball..."
 tar cpzf "$STAGING/alpine_rootfs.tgz" \
