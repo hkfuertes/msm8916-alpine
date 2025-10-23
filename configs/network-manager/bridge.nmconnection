@@ -1,8 +1,10 @@
 [connection]
+id=br0
 uuid=6c5f9a0e-0d7b-41e5-9b8e-4c7e9a9e8a21
 type=bridge
 interface-name=br0
 autoconnect=true
+autoconnect-slaves=1
 
 [bridge]
 stp=false

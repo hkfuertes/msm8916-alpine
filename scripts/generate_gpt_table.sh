@@ -1,17 +1,21 @@
 #!/bin/sh -e
-# Creates GPT table with fixed TOT_SECTORS=7569408 (512B logical sectors)
+# Creates GPT table for MSM8916 eMMC
+# Total disk: 0x748000 sectors (7634944 sectors = 3.64 GB)
 # rootfs partition automatically extends to end of disk
 
 OUTFILE=${1:-gpt_both0.bin}
 TMPDIR=$(mktemp -d)
 IMG="${TMPDIR}/gpt.img"
 
-# Total size in 512B sectors
-TOT_SECTORS=7569408
+# Total size in 512B sectors (from EDL printgpt)
+TOT_SECTORS=7634944
 
 # GPT boundaries
 FIRST_LBA=34
 LAST_LBA=$((TOT_SECTORS - 34))
+
+echo "[*] Creating GPT with $TOT_SECTORS total sectors"
+echo "[*] Disk size: $(( (TOT_SECTORS * 512) / 1024 / 1024 )) MB"
 
 # Create image with exact size
 truncate -s $((TOT_SECTORS * 512)) "${IMG}"
@@ -42,11 +46,15 @@ gpt.img14 : start=348194, type=1B81E7E6-F50D-419B-A739-2AEEF8DA3335, name="rootf
 EOF
 
 # Build gpt_both0.bin (primary + entries + backup header)
-dd if="${IMG}" of="${OUTFILE}" bs=512 count=34
-dd if="${IMG}" bs=512 skip=2 count=32 >> "${OUTFILE}"
-dd if="${IMG}" bs=512 skip=$((TOT_SECTORS - 1)) count=1 >> "${OUTFILE}"
+dd if="${IMG}" of="${OUTFILE}" bs=512 count=34 status=none
+dd if="${IMG}" bs=512 skip=2 count=32 status=none >> "${OUTFILE}"
+dd if="${IMG}" bs=512 skip=$((TOT_SECTORS - 1)) count=1 status=none >> "${OUTFILE}"
 
 # Cleanup
 rm -rf "${TMPDIR}"
 
-echo "Generated: ${OUTFILE}"
+echo "[+] Generated: ${OUTFILE}"
+echo "[*] Rootfs partition:"
+echo "    Start sector: 348194"
+echo "    End sector:   $((LAST_LBA))"
+echo "    Size:         $(( (LAST_LBA - 348194 + 1) * 512 / 1024 / 1024 )) MB"
