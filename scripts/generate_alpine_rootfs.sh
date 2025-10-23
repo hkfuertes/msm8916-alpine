@@ -156,9 +156,6 @@ server 1.pool.ntp.org iburst
 server 2.pool.ntp.org iburst
 server 3.pool.ntp.org iburst
 
-# Allow NTP client access from local network
-allow 192.168.5.0/24
-
 # Sync system clock to hardware clock
 rtcsync
 
@@ -170,10 +167,6 @@ makestep 1.0 3
 CHRONYEOF
 
 # Udev rules
-cat << EOF > "$CHROOT/etc/udev/rules.d/10-udc.rules"
-ACTION=="add", SUBSYSTEM=="udc", RUN+="/sbin/modprobe libcomposite", RUN+="/usr/bin/gt load rndis-os-desc.scheme rndis"
-EOF
-
 cat << EOF > "$CHROOT/etc/udev/rules.d/99-nm-usb0.rules"
 SUBSYSTEM=="net", ACTION=="add|change|move", ENV{DEVTYPE}=="gadget", ENV{NM_UNMANAGED}="0"
 EOF
