@@ -75,6 +75,7 @@ apk add --no-cache \
     networkmanager-tui \
     networkmanager-wifi \
     networkmanager-wwan \
+    networkmanager-dnsmaq \
     openrc \
     rmtfs \
     shadow \
