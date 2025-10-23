@@ -8,3 +8,4 @@ dist
 files
 mnt
 rootfs
+variables.env

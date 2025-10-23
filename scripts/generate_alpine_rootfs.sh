@@ -1,5 +1,7 @@
 #!/bin/sh -e
 
+. ./variables.env
+
 # Configuration
 WORKDIR="$(pwd)"
 OUT_DIR="${1:-"$WORKDIR/files"}"
@@ -8,7 +10,7 @@ CHROOT="$STAGING/rootfs"
 
 HOST_NAME="${HOST_NAME:=uz801a}"
 RELEASE="${RELEASE:=v3.20}"
-PMOS_RELEASE="${PMOS_RELEASE:=v24.06}"
+PMOS_RELEASE="${PMOS_RELEASE:=v24.12}"
 MIRROR="${MIRROR:=http://dl-cdn.alpinelinux.org/alpine}"
 PMOS_MIRROR="${PMOS_MIRROR:=http://mirror.postmarketos.org/postmarketos}"
 
@@ -78,6 +80,7 @@ apk add --no-cache \
     wireguard-tools \
     wireguard-tools-wg-quick \
     wpa_supplicant \
+    nano \
     shadow
 "
 
@@ -162,16 +165,6 @@ install -Dm0644 configs/msm8916-usb-gadget.conf "$CHROOT/etc/msm8916-usb-gadget.
 
 # Enable USB gadget service
 chroot "$CHROOT" ash -l -c "rc-update add msm8916-usb-gadget default" || true
-
-# DHCP config
-mkdir -p "$CHROOT/etc/dnsmasq.d"
-cp configs/dhcp.conf "$CHROOT/etc/dnsmasq.d/dhcp.conf"
-cp configs/dnsmasq-main.conf "$CHROOT/etc/dnsmasq.conf"
-
-# NetworkManager DNS config
-mkdir -p "$CHROOT/etc/NetworkManager/conf.d"
-cp configs/99-custom.conf "$CHROOT/etc/NetworkManager/conf.d/"
-
 
 # Create tarball
 echo "[*] Creating tarball..."
