@@ -98,7 +98,7 @@ chroot "$CHROOT" ash -l -c "
 echo ${USERNAME}:${PASSWORD}::::/home/${USERNAME}:/bin/bash | newusers
 
 # Set up bash for the user
-printf 'PS1=\"\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]$ \"\n' > /home/${USERNAME}/.bashrc
+printf 'PS1=\"\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]$ \"\n' > /home/${USERNAME}/.bash_profile
 chown ${USERNAME}:${USERNAME} /home/${USERNAME}/.bash_profile
 
 # Add user to docker group
