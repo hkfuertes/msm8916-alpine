@@ -1,159 +1,275 @@
-# OpenStick Image Builder
-Image builder for MSM8916 based 4G modem dongles
 
-This builder uses the precompiled [kernel](https://pkgs.postmarketos.org/package/v24.06/postmarketos/aarch64/linux-postmarketos-qcom-msm8916) provided by [postmarketOS](https://postmarketos.org/) for Qualcomm MSM8916 devices.
+# Alpine Linux for MSM8916 Devices
 
-> [!NOTE]
-> This branch generates an `alpine` image, use the [main branch](https://github.com/kinsamanka/OpenStick-Builder/tree/main) for a `debian` image.
+Alpine Linux rootfs builder for MSM8916-based devices (dongles and MiFi routers) with USB gadget, networking bridge, Docker, and LTE modem support.
 
-## Build Instructions
-### Build locally
-This has been tested to work on **Ubuntu 22.04**
-- clone
-  ```shell
-  git clone -b alpine --recurse-submodules https://github.com/kinsamanka/OpenStick-Builder.git
-  cd OpenStick-Builder/
-  ```
-#### Quick
-- build
-  ```shell
-  cd OpenStick-Builder/
-  sudo ./build.sh
-  ```
-#### Detailed
-- install dependencies
-  ```shell
-  sudo scripts/install_deps.sh
-  ```
-- build hyp and lk2nd
+## Features
 
-  these custom bootloader allows basic support for `extlinux.conf` file, similar to u-boot and depthcharge.
-  ```shell
-  sudo scripts/build_hyp_aboot.sh
-  ```
-- extract Qualcomm firmware
+- **Alpine Linux v3.20** with postmarketOS edge kernel (6.12.1+)
+- **USB Gadget Mode**: RNDIS, ECM, NCM, ACM serial ports, and mass storage
+- **Network Bridge**: br0 with DHCP server for USB tethering
+- **WiFi Client**: WPA2 support via NetworkManager
+- **LTE Modem**: ModemManager with QMI support (MSM8916 cellular)
+- **Docker**: Pre-installed with user in docker group
+- **NTP Sync**: Chrony for time synchronization
+- **Auto-expand rootfs**: First boot partition and filesystem expansion
+- **Dropbear SSH**: Lightweight SSH server
+- **WireGuard**: VPN support built-in
 
-  extracts the bootloader and creates a new partition table that utilizes the full emmc space
-  ```shell
-  sudo scripts/extract_fw.sh
-  ```
-- create rootfs
-  ```shell
-  sudo scripts/alpine_rootfs.sh
-  ```
-- create images
-  ```shell
-  sudo scripts/build_images.sh
-  ```
+## Requirements
 
-The generated firmware files will be stored under the `files` directory
+### Host System
 
-### On the cloud using Github Actions
-1. Fork this repo
-2. Run the [Build workflow](../../actions/workflows/build.yml)
-   - click and run ***Run workflow***
-   - once the workflow is done, click on the workflow summary and then download the resulting artifact
+- **Docker** (for building in isolated environment)
+- **Python 3** with `edl` tool (for flashing via EDL mode)
 
-## Customizations
-Edit [`scripts/alpine_rootfs.sh`](scripts/alpine_rootfs.sh#L33) to add/remove packages.
+## Configuration
 
-## Firmware Installation
-> [!WARNING]  
-> The following commands can potentially brick your device, making it unbootable. Proceed with caution and at your own risk!
+### variables.env
 
-> [!IMPORTANT]  
-> Make sure to perform a backup of the original firmware using the command `edl rf orig_fw.bin`
+Edit `variables.env` to customize your build:
 
-### Prerequisites
-- [EDL](https://github.com/bkerler/ed)
-- Android fastboot tool
-  ```
-  sudo apt install fastboot
-  ```
+```
+# System configuration
+HOST_NAME="uz801a"
+USERNAME="user"
+PASSWORD="1"
+```
 
-### Steps
-- Enter Qualcom EDL mode using this [guide](https://wiki.postmarketos.org/wiki/Zhihe_series_LTE_dongles_(generic-zhihe)#How_to_enter_flash_mode)
-- Backup required partitions
+### WiFi Configuration
 
-  The following files are required from the original firmware:
-  
-     - `fsc.bin`
-     - `fsg.bin`
-     - `modem.bin`
-     - `modemst1.bin`
-     - `modemst2.bin`
-     - `persist.bin`
-     - `sec.bin`
+Edit `configs/network-manager/wlan.nmconnection`:
 
-  Skip this step if these files are already present
-  ```shell
-  for n in fsc fsg modem modemst1 modemst2 persist sec; do
-      edl r ${n} ${n}.bin
-  done
-  ```
-- Install `aboot`
-  ```shell
-  edl w aboot aboot.mbn
-  ```
-- Reboot to fastboot
-  ```shell
-  edl e boot
-  edl reset
-  ```
-- Flash firmware
-  ```shell
-  fastboot flash partition gpt_both0.bin
-  fastboot flash aboot aboot.mbn
-  fastboot flash hyp hyp.mbn
-  fastboot flash rpm rpm.mbn
-  fastboot flash sbl1 sbl1.mbn
-  fastboot flash tz tz.mbn
-  fastboot flash boot boot.bin
-  fastboot flash rootfs alpine_rootfs.bin
-  ```
-- Restore original partitions
-  ```shell
-  for n in fsc fsg modem modemst1 modemst2 persist sec; do
-      fastboot flash ${n} ${n}.bin
-  done
-  ```
-- Reboot
-  ```shell
-  fastboot reboot
-  ```
+```
+[wifi]
+ssid=YourSSID
 
-## Post-Install
-- Network configuration
-  
-  | wlan0 | |
-  | ----- | ---- |
-  | ssid | Openstick |
-  | password | openstick |
-  | ip addr | 192.168.4.1 |
+[wifi-security]
+psk=YourPassword
+```
 
-  | usb0 | |
-  | ----- | ---- |
-  | ip addr | 192.168.5.1 |
+### USB Gadget Configuration
 
-- Default user
-  
-  | | |
-  | ----- | ---- |
-  | username | user |
-  | password | 1 |
- 
-- If your device is not based on **UZ801**, modify `/boot/extlinux/extlinux.conf` to use the correct devicetree
-  ```shell
-  sed -i 's/yiming-uz801v3/<BOARD>/' /boot/extlinux/extlinux.conf
-  ```
+Edit `configs/usb-gadget/msm8916-usb-gadget.conf`:
 
-  where `<BOARD>` is
-     - `thwc-uf896` for **UF896** boards
-     - `thwc-ufi001c` for **UFIxxx** boards
-     - `jz01-45-v33` for **JZxxx** boards
-     - `fy-mf800` for **MF800** boards
+```
+# Enable/disable functions
+ENABLE_RNDIS=1      # Windows/Android USB tethering
+ENABLE_ECM=0        # Linux/macOS USB ethernet
+ENABLE_NCM=0        # Modern USB ethernet
+ENABLE_ACM=1        # Serial console over USB
+ENABLE_UMS=0        # USB mass storage
 
-- To maximize the `rootfs` partition
-  ```shell
-  resize2fs /dev/disk/by-partlabel/rootfs
-  ```
+# Network bridge
+NETWORK_BRIDGE="br0"
+
+# USB IDs
+USB_VENDOR_ID="0x1d6b"
+USB_PRODUCT_ID="0x0104"
+USB_MANUFACTURER="MSM8916"
+USB_PRODUCT="USB Gadget"
+```
+
+## Usage
+
+### 1. Build everything (Docker)
+
+```
+# Create builder container (first time only)
+make builder
+
+# Build all images (rootfs, boot, recovery, GPT, firmware.zip)
+make build
+```
+
+**Build output** in `files/`:
+- `rootfs.tgz` - Alpine rootfs tarball
+- `boot.img` - Kernel + initramfs boot image
+- `recovery.img` - Recovery image (optional)
+- `gpt_both0.bin` - GPT partition table for 4GB eMMC
+- `firmware.zip` - Complete firmware package
+
+### 2. Flash to device via EDL
+
+#### Enter EDL Mode
+
+1. Power off the device completely
+2. Hold **Volume Up** button
+3. Connect USB cable while holding button
+4. Device enters EDL mode (no screen indication)
+
+#### Flash with EDL
+
+```
+./flash.sh
+```
+
+### 3. First Boot
+
+After flashing and reboot:
+1. Device boots Alpine Linux (~30-45 seconds)
+2. Rootfs automatically expands to fill eMMC
+3. WiFi connects to configured network
+4. USB gadget activates (RNDIS interface)
+5. Bridge br0 creates with DHCP server (192.168.5.1/24)
+6. SSH server starts on port 22
+
+**Access via SSH:**
+```
+# Via WiFi (check router for IP)
+ssh user@192.168.77.XXX
+
+# Via USB
+ssh user@192.168.5.1
+
+# Default credentials
+Username: user
+Password: 1
+```
+
+## Components
+
+### USB Gadget
+
+The device exposes itself as a USB network adapter (RNDIS) when connected to a PC.
+
+**Default configuration:**
+- **Interface**: usb0
+- **Bridge**: br0 (192.168.5.1/24)
+- **DHCP**: Served by NetworkManager (192.168.5.2-254)
+- **Functions**: RNDIS + ACM serial
+
+**Service control:**
+```
+# Start/stop/restart
+rc-service msm8916-usb-gadget start|stop|restart
+
+# Check status
+rc-service msm8916-usb-gadget status
+
+# View logs
+grep msm8916-usb-gadget /var/log/messages
+```
+
+### Network Bridge (br0)
+
+Bridge interface that connects USB gadget, WiFi, and LTE for internet sharing.
+
+**Configuration:**
+- **IP**: 192.168.5.1/24
+- **DHCP Range**: 192.168.5.2-254
+- **NAT**: Enabled via NetworkManager shared method
+- **Members**: usb0 (RNDIS interface)
+
+**Manual control:**
+```
+# Activate bridge
+nmcli connection up br0
+
+# Check status
+ip addr show br0
+
+# Verify usb0 is in bridge
+bridge link show
+```
+
+### Docker
+
+Pre-installed and configured with overlay2 storage driver.
+
+**User permissions:**
+- User added to `docker` group (no sudo required)
+
+**Configuration:** `/etc/docker/daemon.json`
+```
+{
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "10m",
+    "max-file": "3"
+  },
+  "storage-driver": "overlay2",
+  "iptables": true,
+  "bridge": "docker0",
+  "fixed-cidr": "172.17.0.0/16"
+}
+```
+
+**Usage:**
+```
+# Check version
+docker --version
+
+# Run test container
+docker run hello-world
+
+# View containers
+docker ps -a
+```
+
+### LTE Modem
+
+ModemManager with QMI support for cellular connectivity.
+
+**Service:** `modemmanager` + `rmtfs`
+
+**Check status:**
+```
+# List modems
+mmcli -L
+
+# Get modem details
+mmcli -m 0
+
+# Check connection
+mmcli -m 0 --simple-status
+```
+
+**Manual connection:**
+```
+# Connect to network
+nmcli connection up lte
+
+# Check IP
+ip addr show wwan0qmi0
+```
+
+### SSH Access
+
+Dropbear SSH server on port 22.
+
+**Default credentials:**
+- Username: `user` (or configured in variables.env)
+- Password: `1` (or configured in variables.env)
+- Sudo: NOPASSWD enabled
+
+**Connect:**
+```
+# Via WiFi
+ssh user@192.168.77.XXX
+
+# Via USB
+ssh user@192.168.5.1
+```
+
+## First Boot
+
+On first boot, the system will automatically:
+
+1. ✅ Expand rootfs partition to fill eMMC
+2. ✅ Resize ext4 filesystem
+3. ✅ Start all services (NetworkManager, Docker, ModemManager, etc.)
+4. ✅ Connect to configured WiFi
+5. ✅ Create USB gadget (RNDIS interface)
+6. ✅ Bridge usb0 to br0
+7. ✅ Start DHCP server on br0
+8. ✅ Sync time via Chrony
+
+**Boot time:** ~30-45 seconds to full network connectivity
+
+## Credits
+
+- Alpine Linux Project
+- postmarketOS Project
+- Qualcomm MSM8916 mainline developers
+- Linux USB Gadget subsystem
