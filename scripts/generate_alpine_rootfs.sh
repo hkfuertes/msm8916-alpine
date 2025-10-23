@@ -133,7 +133,7 @@ sed -i "/localhost/ s/$/ ${HOST_NAME}/" "$CHROOT/etc/hosts"
 # Copy configs
 echo "[*] Copying configs..."
 mkdir -p "$CHROOT/etc/NetworkManager/system-connections"
-cp configs/*.nmconnection "$CHROOT/etc/NetworkManager/system-connections/" 2>/dev/null || true
+cp configs/network-manager/*.nmconnection "$CHROOT/etc/NetworkManager/system-connections/" 2>/dev/null || true
 chmod 0600 "$CHROOT/etc/NetworkManager/system-connections/"* 2>/dev/null || true
 sed -i '/\[main\]/a dns=dnsmasq' "$CHROOT/etc/NetworkManager/NetworkManager.conf"
 
@@ -159,9 +159,9 @@ cat > "$CHROOT/etc/fstab" <<EOF
 EOF
 
 # USB gadget
-install -Dm0755 configs/msm8916-usb-gadget.sh "$CHROOT/usr/sbin/msm8916-usb-gadget.sh"
-install -Dm0755 configs/msm8916-usb-gadget.init "$CHROOT/etc/init.d/msm8916-usb-gadget"
-install -Dm0644 configs/msm8916-usb-gadget.conf "$CHROOT/etc/msm8916-usb-gadget.conf"
+install -Dm0755 configs/usb-gadget/msm8916-usb-gadget.sh "$CHROOT/usr/sbin/msm8916-usb-gadget.sh"
+install -Dm0755 configs/usb-gadget/msm8916-usb-gadget.init "$CHROOT/etc/init.d/msm8916-usb-gadget"
+install -Dm0644 configs/usb-gadget/msm8916-usb-gadget.conf "$CHROOT/etc/msm8916-usb-gadget.conf"
 
 # Enable USB gadget service
 chroot "$CHROOT" ash -l -c "rc-update add msm8916-usb-gadget default" || true

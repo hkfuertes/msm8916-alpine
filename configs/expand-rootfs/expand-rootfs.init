@@ -1,0 +1,55 @@
+#!/sbin/openrc-run
+# OpenRC service to expand rootfs on first boot
+
+name="expand-rootfs"
+description="Expand rootfs partition on first boot"
+
+FLAG_FILE="/var/lib/expand-rootfs-done"
+command="/usr/sbin/expand-rootfs.sh"
+
+depend() {
+    need localmount
+    after modules fsck
+    before networkmanager
+    keyword -docker -lxc -openvz -prefix -systemd-nspawn -uml -vserver -xenu
+}
+
+start_pre() {
+    # Check if already expanded
+    if [ -f "${FLAG_FILE}" ]; then
+        ewarn "Rootfs already expanded, skipping"
+        return 1
+    fi
+    
+    # Check if script exists
+    if [ ! -x "${command}" ]; then
+        eerror "${command} not found or not executable"
+        return 1
+    fi
+    
+    return 0
+}
+
+start() {
+    ebegin "Expanding rootfs partition"
+    
+    # Execute the expansion script
+    ${command}
+    local ret=$?
+    
+    if [ ${ret} -eq 0 ]; then
+        # Create flag file to prevent running again
+        mkdir -p "$(dirname "${FLAG_FILE}")"
+        touch "${FLAG_FILE}"
+        einfo "Rootfs expanded successfully"
+    else
+        eerror "Failed to expand rootfs"
+    fi
+    
+    eend ${ret}
+}
+
+stop() {
+    # No-op for oneshot service
+    return 0
+}
