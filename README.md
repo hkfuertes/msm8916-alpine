@@ -50,7 +50,7 @@ psk=YourPassword
 
 ### USB Gadget Configuration
 
-USB gadget uses simple configuration file `/etc/msm8916-usb-gadget.conf`:
+USB gadget uses simple configuration file `/etc/usb-gadget.conf`:
 
 ```bash
 # MSM8916 USB Gadget Configuration
@@ -62,22 +62,22 @@ ENABLE_OTG=0        # 1 = OTG Host mode, 0 = Gadget mode
 **Management commands:**
 ```bash
 # Enable NCM mode (Linux/Mac compatible)
-msm8916-usb-gadget enable_ncm
+usb-gadget enable_ncm
 
 # Enable RNDIS mode (Windows compatible)
-msm8916-usb-gadget disable_ncm
+usb-gadget disable_ncm
 
 # Enable OTG Host mode (for USB peripherals)
-msm8916-usb-gadget enable_otg
+usb-gadget enable_otg
 
 # Disable OTG (back to gadget mode)
-msm8916-usb-gadget disable_otg
+usb-gadget disable_otg
 
 # View current config
-msm8916-usb-gadget status
+usb-gadget status
 
 # Apply changes
-rc-service msm8916-usb-gadget restart
+rc-service usb-gadget restart
 ```
 
 ## Usage
@@ -162,15 +162,15 @@ The device exposes itself as a USB network adapter when connected to a PC.
 **Service control:**
 ```bash
 # Start/stop/restart
-rc-service msm8916-usb-gadget start|stop|restart
+rc-service usb-gadget start|stop|restart
 
 # Check status and current mode
-msm8916-usb-gadget status
+usb-gadget status
 
 # Switch modes
-msm8916-usb-gadget enable_ncm    # Linux/Mac
-msm8916-usb-gadget disable_ncm   # Windows (RNDIS)
-msm8916-usb-gadget enable_otg    # USB Host mode
+usb-gadget enable_ncm    # Linux/Mac
+usb-gadget disable_ncm   # Windows (RNDIS)
+usb-gadget enable_otg    # USB Host mode
 ```
 
 ### Network Configuration
@@ -301,8 +301,8 @@ ssh user@192.168.5.1
 
 **Enable:**
 ```bash
-msm8916-usb-gadget enable_ncm
-rc-service msm8916-usb-gadget restart
+usb-gadget enable_ncm
+rc-service usb-gadget restart
 ```
 
 ### RNDIS Mode
@@ -317,8 +317,8 @@ rc-service msm8916-usb-gadget restart
 
 **Enable:**
 ```bash
-msm8916-usb-gadget disable_ncm
-rc-service msm8916-usb-gadget restart
+usb-gadget disable_ncm
+rc-service usb-gadget restart
 ```
 
 ### OTG Host Mode
@@ -332,8 +332,8 @@ rc-service msm8916-usb-gadget restart
 
 **Enable:**
 ```bash
-msm8916-usb-gadget enable_otg
-rc-service msm8916-usb-gadget restart
+usb-gadget enable_otg
+rc-service usb-gadget restart
 ```
 
 **Warning:** WiFi or LTE connectivity required for remote access when in OTG mode!
@@ -359,7 +359,7 @@ On first boot, the system will automatically:
 
 ```bash
 # Check service status
-rc-service msm8916-usb-gadget status
+rc-service usb-gadget status
 
 # Check if usb0 exists
 ip link show usb0
@@ -388,15 +388,15 @@ nmcli connection show usb0 | grep method
 
 ```bash
 # Check current mode
-msm8916-usb-gadget status
+usb-gadget status
 
 # Switch to NCM (Linux/Mac)
-msm8916-usb-gadget enable_ncm
-rc-service msm8916-usb-gadget restart
+usb-gadget enable_ncm
+rc-service usb-gadget restart
 
 # Switch to RNDIS (Windows)
-msm8916-usb-gadget disable_ncm
-rc-service msm8916-usb-gadget restart
+usb-gadget disable_ncm
+rc-service usb-gadget restart
 ```
 
 ## Package Requirements

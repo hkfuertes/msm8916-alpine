@@ -2,10 +2,10 @@
 # MSM8916 USB Gadget OpenRC service script
 # Compatible with Alpine Linux / PostmarketOS
 
-name="msm8916-usb-gadget"
+name="usb-gadget"
 description="MSM8916 USB Gadget configuration service"
 
-command="/usr/sbin/msm8916-usb-gadget.sh"
+command="/usr/sbin/usb-gadget"
 pidfile="/run/${RC_SVCNAME}.pid"
 
 depend() {

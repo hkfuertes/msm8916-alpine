@@ -85,14 +85,21 @@ apk add --no-cache \
     wireguard-tools \
     wireguard-tools-wg-quick \
     e2fsprogs e2fsprogs-extra \
-    wpa_supplicant
+    neofetch \
+    htop \
+    wpa_supplicant \
+    bash bash-completion
 "
 
 # Setup Alpine
 echo "[*] Setting up Alpine..."
 chroot "$CHROOT" ash -l -c "
 # Create user
-echo ${USERNAME}:${PASSWORD}::::/home/${USERNAME}:/bin/ash | newusers
+echo ${USERNAME}:${PASSWORD}::::/home/${USERNAME}:/bin/bash | newusers
+
+# Set up bash for the user
+printf 'PS1=\"\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]$ \"\n' > /home/${USERNAME}/.bashrc
+chown ${USERNAME}:${USERNAME} /home/${USERNAME}/.bash_profile
 
 # Add user to docker group
 addgroup ${USERNAME} docker
@@ -185,8 +192,8 @@ mkdir -p "$CHROOT/etc/NetworkManager/system-connections"
 cp configs/network-manager/*.nmconnection "$CHROOT/etc/NetworkManager/system-connections/" 2>/dev/null || true
 chmod 0600 "$CHROOT/etc/NetworkManager/system-connections/"* 2>/dev/null || true
 
-mkdir -p /etc/NetworkManager/dnsmasq-shared.d
-tee /etc/NetworkManager/dnsmasq-shared.d/usb0.conf << 'EOF'
+mkdir -p "$CHROOT/etc/NetworkManager/dnsmasq-shared.d"
+cat > "$CHROOT/etc/NetworkManager/dnsmasq-shared.d/usb0.conf" << 'EOF'
 # Don't send default gateway (option 3) via DHCP
 dhcp-option=3
 
@@ -216,11 +223,11 @@ cat > "$CHROOT/etc/fstab" <<EOF
 EOF
 
 # USB gadget
-install -Dm0755 configs/usb-gadget/msm8916-usb-gadget.sh "$CHROOT/usr/sbin/msm8916-usb-gadget.sh"
-install -Dm0755 configs/usb-gadget/msm8916-usb-gadget.init "$CHROOT/etc/init.d/msm8916-usb-gadget"
+install -Dm0755 configs/usb-gadget/usb-gadget.sh "$CHROOT/usr/sbin/usb-gadget"
+install -Dm0755 configs/usb-gadget/usb-gadget.init "$CHROOT/etc/init.d/usb-gadget"
 
 # Enable USB gadget service
-chroot "$CHROOT" ash -l -c "rc-update add msm8916-usb-gadget default" || true
+chroot "$CHROOT" ash -l -c "rc-update add usb-gadget default" || true
 
 # Expand rootfs on first boot
 install -Dm0755 configs/expand-rootfs/expand-rootfs.sh "$CHROOT/usr/sbin/expand-rootfs.sh"

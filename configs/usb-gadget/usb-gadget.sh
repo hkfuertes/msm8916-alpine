@@ -1,7 +1,7 @@
 #!/bin/bash
 
 GADGET_PATH="/sys/kernel/config/usb_gadget/msm8916"
-CONFIG_FILE="/etc/msm8916-usb-gadget.conf"
+CONFIG_FILE="/etc/usb-gadget.conf"
 
 # Load configuration from file
 load_config() {
@@ -205,26 +205,26 @@ status() {
 enable_ncm() {
     update_config "USE_NCM" "1"
     echo "NCM mode enabled (Linux/Mac compatible)"
-    echo "Run 'rc-service msm8916-usb-gadget restart' to apply changes"
+    echo "Run 'rc-service usb-gadget restart' to apply changes"
 }
 
 disable_ncm() {
     update_config "USE_NCM" "0"
     echo "NCM mode disabled - RNDIS enabled (Windows compatible)"
-    echo "Run 'rc-service msm8916-usb-gadget restart' to apply changes"
+    echo "Run 'rc-service usb-gadget restart' to apply changes"
 }
 
 enable_otg() {
     update_config "ENABLE_OTG" "1"
     echo "OTG Host mode enabled"
-    echo "Run 'rc-service msm8916-usb-gadget restart' to apply changes"
+    echo "Run 'rc-service usb-gadget restart' to apply changes"
     echo "WARNING: This disables USB gadget functionality!"
 }
 
 disable_otg() {
     update_config "ENABLE_OTG" "0"
     echo "OTG Host mode disabled - Gadget mode enabled"
-    echo "Run 'rc-service msm8916-usb-gadget restart' to apply changes"
+    echo "Run 'rc-service usb-gadget restart' to apply changes"
 }
 
 show_config() {
