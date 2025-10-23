@@ -208,7 +208,6 @@ EOF
 # USB gadget
 install -Dm0755 configs/usb-gadget/msm8916-usb-gadget.sh "$CHROOT/usr/sbin/msm8916-usb-gadget.sh"
 install -Dm0755 configs/usb-gadget/msm8916-usb-gadget.init "$CHROOT/etc/init.d/msm8916-usb-gadget"
-install -Dm0644 configs/usb-gadget/msm8916-usb-gadget.conf "$CHROOT/etc/msm8916-usb-gadget.conf"
 
 # Enable USB gadget service
 chroot "$CHROOT" ash -l -c "rc-update add msm8916-usb-gadget default" || true
