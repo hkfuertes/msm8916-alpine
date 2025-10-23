@@ -75,7 +75,7 @@ apk add --no-cache \
     networkmanager-tui \
     networkmanager-wifi \
     networkmanager-wwan \
-    networkmanager-dnsmaq \
+    networkmanager-dnsmasq \
     openrc \
     rmtfs \
     shadow \
@@ -184,6 +184,15 @@ echo "[*] Copying configs..."
 mkdir -p "$CHROOT/etc/NetworkManager/system-connections"
 cp configs/network-manager/*.nmconnection "$CHROOT/etc/NetworkManager/system-connections/" 2>/dev/null || true
 chmod 0600 "$CHROOT/etc/NetworkManager/system-connections/"* 2>/dev/null || true
+
+mkdir -p /etc/NetworkManager/dnsmasq-shared.d
+tee /etc/NetworkManager/dnsmasq-shared.d/usb0.conf << 'EOF'
+# Don't send default gateway (option 3) via DHCP
+dhcp-option=3
+
+# Only send IP address and DNS
+interface=usb0
+EOF
 
 # Custom DTBs
 mkdir -p "$CHROOT/boot/dtbs/qcom"

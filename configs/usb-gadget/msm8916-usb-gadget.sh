@@ -1,13 +1,44 @@
 #!/bin/bash
 
-# ==========================================
-# CONFIGURATION - Edit these values
-# ==========================================
+GADGET_PATH="/sys/kernel/config/usb_gadget/msm8916"
+CONFIG_FILE="/etc/msm8916-usb-gadget.conf"
+
+# Load configuration from file
+load_config() {
+    if [ -f "$CONFIG_FILE" ]; then
+        . "$CONFIG_FILE"
+    fi
+    
+    # Set defaults if not configured
+    : ${USE_NCM:=1}
+    : ${ENABLE_OTG:=0}
+}
+
+# Update a single configuration value
+update_config() {
+    local key="$1"
+    local value="$2"
+    
+    # Create config file if doesn't exist
+    if [ ! -f "$CONFIG_FILE" ]; then
+        cat > "$CONFIG_FILE" << 'EOF'
+# MSM8916 USB Gadget Configuration
+# Generated automatically - modify with enable_*/disable_* commands
+
 USE_NCM=1           # 1 = NCM (Linux/Mac), 0 = RNDIS (Windows)
 ENABLE_OTG=0        # 1 = OTG Host mode, 0 = Gadget mode
-# ==========================================
-
-GADGET_PATH="/sys/kernel/config/usb_gadget/msm8916"
+EOF
+    fi
+    
+    # Update or add the key
+    if grep -q "^${key}=" "$CONFIG_FILE"; then
+        sed -i "s/^${key}=.*/${key}=${value}/" "$CONFIG_FILE"
+    else
+        echo "${key}=${value}" >> "$CONFIG_FILE"
+    fi
+    
+    log "Configuration updated: ${key}=${value}"
+}
 
 log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') $@"
@@ -41,6 +72,8 @@ generate_mac_address() {
 }
 
 setup_gadget() {
+    load_config
+    
     # Check if OTG host mode requested
     if [ "$ENABLE_OTG" = "1" ]; then
         log "OTG Host mode enabled - skipping gadget setup"
@@ -140,8 +173,15 @@ teardown_gadget() {
 }
 
 status() {
+    load_config
+    
+    echo "Configuration:"
+    echo "  NCM Mode: $([ "$USE_NCM" = "1" ] && echo "Enabled (Linux/Mac)" || echo "Disabled (RNDIS/Windows)")"
+    echo "  OTG Host: $([ "$ENABLE_OTG" = "1" ] && echo "Enabled" || echo "Disabled")"
+    echo ""
+    
     if [ "$ENABLE_OTG" = "1" ]; then
-        echo "OTG Host mode enabled"
+        echo "USB Mode: OTG Host"
         return 0
     fi
     
@@ -151,11 +191,49 @@ status() {
         echo "UDC: $(cat ${GADGET_PATH}/UDC)"
         if ip link show usb0 >/dev/null 2>&1; then
             echo "Interface: usb0 (managed by NetworkManager)"
+            if ip addr show usb0 | grep -q 'inet '; then
+                echo "IP: $(ip addr show usb0 | grep 'inet ' | awk '{print $2}')"
+            fi
         fi
         return 0
     else
         echo "USB Gadget: Inactive"
         return 1
+    fi
+}
+
+enable_ncm() {
+    update_config "USE_NCM" "1"
+    echo "NCM mode enabled (Linux/Mac compatible)"
+    echo "Run 'rc-service msm8916-usb-gadget restart' to apply changes"
+}
+
+disable_ncm() {
+    update_config "USE_NCM" "0"
+    echo "NCM mode disabled - RNDIS enabled (Windows compatible)"
+    echo "Run 'rc-service msm8916-usb-gadget restart' to apply changes"
+}
+
+enable_otg() {
+    update_config "ENABLE_OTG" "1"
+    echo "OTG Host mode enabled"
+    echo "Run 'rc-service msm8916-usb-gadget restart' to apply changes"
+    echo "WARNING: This disables USB gadget functionality!"
+}
+
+disable_otg() {
+    update_config "ENABLE_OTG" "0"
+    echo "OTG Host mode disabled - Gadget mode enabled"
+    echo "Run 'rc-service msm8916-usb-gadget restart' to apply changes"
+}
+
+show_config() {
+    if [ -f "$CONFIG_FILE" ]; then
+        echo "Current configuration ($CONFIG_FILE):"
+        cat "$CONFIG_FILE"
+    else
+        echo "No configuration file found at $CONFIG_FILE"
+        echo "Defaults will be used: USE_NCM=1, ENABLE_OTG=0"
     fi
 }
 
@@ -174,8 +252,23 @@ case "$1" in
     status)
         status
         ;;
+    enable_ncm)
+        enable_ncm
+        ;;
+    disable_ncm)
+        disable_ncm
+        ;;
+    enable_otg)
+        enable_otg
+        ;;
+    disable_otg)
+        disable_otg
+        ;;
+    show_config|config)
+        show_config
+        ;;
     *)
-        echo "Usage: $0 {start|stop|restart|status}"
+        echo "Usage: $0 {start|stop|restart|status|enable_ncm|disable_ncm|enable_otg|disable_otg|show_config}"
         exit 1
         ;;
 esac
