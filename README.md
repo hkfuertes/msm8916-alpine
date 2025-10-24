@@ -120,7 +120,7 @@ After flashing and reboot:
 2. Rootfs automatically expands to fill eMMC
 3. WiFi connects to configured network
 4. USB gadget activates (NCM/RNDIS interface)
-5. USB interface gets IP 192.168.5.1/24 with DHCP server
+5. USB interface gets IP 192.168.42.1/24 with DHCP server
 6. SSH server starts on port 22
 
 **Access via SSH:**
@@ -129,7 +129,7 @@ After flashing and reboot:
 ssh user@192.168.77.XXX
 
 # Via USB
-ssh user@192.168.5.1
+ssh user@192.168.42.1
 
 # Default credentials
 Username: user
@@ -144,8 +144,8 @@ The device exposes itself as a USB network adapter when connected to a PC.
 
 **Default configuration:**
 - **Interface**: usb0
-- **IP**: 192.168.5.1/24
-- **DHCP**: NetworkManager shared connection (192.168.5.10-100)
+- **IP**: 192.168.42.1/24
+- **DHCP**: NetworkManager shared connection (192.168.42.10-100)
 - **Mode**: NCM (Linux/Mac) or RNDIS (Windows)
 - **MAC addresses**: Auto-generated from machine-id
 - **No default route**: Host traffic stays on primary network
@@ -176,8 +176,8 @@ usb-gadget enable_otg    # USB Host mode
 
 **USB Networking (usb0):**
 - **Method**: NetworkManager shared connection
-- **IP**: 192.168.5.1/24
-- **DHCP Range**: 192.168.5.10-192.168.5.100
+- **IP**: 192.168.42.1/24
+- **DHCP Range**: 192.168.42.10-192.168.42.100
 - **Gateway**: Not advertised (host keeps existing default route)
 - **DNS**: Optional, configurable
 
@@ -191,7 +191,7 @@ autoconnect=true
 
 [ipv4]
 method=shared
-address1=192.168.5.1/24
+address1=192.168.42.1/24
 never-default=true
 
 [ipv6]
@@ -283,7 +283,7 @@ Dropbear SSH server on port 22.
 ssh user@192.168.77.XXX
 
 # Via USB
-ssh user@192.168.5.1
+ssh user@192.168.42.1
 ```
 
 ## USB Gadget Modes
@@ -346,7 +346,7 @@ On first boot, the system will automatically:
 3. ✅ Start all services (NetworkManager, Docker, ModemManager, etc.)
 4. ✅ Connect to configured WiFi
 5. ✅ Create USB gadget (NCM interface)
-6. ✅ Configure usb0 with IP 192.168.5.1/24
+6. ✅ Configure usb0 with IP 192.168.42.1/24
 7. ✅ Start DHCP server on usb0
 8. ✅ Sync time via Chrony
 
