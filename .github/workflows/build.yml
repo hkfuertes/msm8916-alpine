@@ -29,4 +29,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: msm8916-alpine
-          path: files/*
+          path: |
+            files/firmware.zip
+            files/gpt_both0.bin
+            files/rootfs.bin
+            files/boot.bin

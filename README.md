@@ -93,9 +93,8 @@ make build
 ```
 
 **Build output** in `files/`:
-- `rootfs.tgz` - Alpine rootfs tarball
-- `boot.img` - Kernel + initramfs boot image
-- `recovery.img` - Recovery image (optional)
+- `rootfs.bin` - Alpine rootfs sparse image
+- `boot.bin` - Kernel + initramfs boot image
 - `gpt_both0.bin` - GPT partition table for 4GB eMMC
 - `firmware.zip` - Complete firmware package
 
