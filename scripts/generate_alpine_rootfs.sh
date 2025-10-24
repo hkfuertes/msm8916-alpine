@@ -1,6 +1,6 @@
 #!/bin/sh -e
 
-. ./variables.env
+[ -f ./variables.env ] && source ./variables.env
 
 # Configuration
 WORKDIR="$(pwd)"
