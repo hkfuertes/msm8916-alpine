@@ -10,7 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install dependencies and prepare
+      - name: Install dependencies
         run: sudo sh -e scripts/install_dependencies.sh
 
       - name: Build rootfs
