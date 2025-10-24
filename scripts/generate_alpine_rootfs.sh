@@ -21,7 +21,7 @@ PASSWORD="${PASSWORD:=1}"
 trap 'rm -rf "$STAGING"' EXIT INT TERM
 
 # Validations
-[ -d "$OUT_DIR" ] || { echo "No existe directorio de salida: $OUT_DIR"; exit 1; }
+[ -d "$OUT_DIR" ] || mkdir -p "$OUT_DIR"
 command -v qemu-aarch64-static >/dev/null || { echo "Falta qemu-aarch64-static"; exit 1; }
 
 echo "[*] Output directory: $OUT_DIR"

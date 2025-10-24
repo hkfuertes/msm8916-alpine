@@ -9,26 +9,24 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: true
 
-      - name: Install dependencies
-        run: sudo sh -e scripts/install_deps.sh
+      - name: Install dependencies and prepare
+        run: sudo sh -e scripts/install_dependencies.sh
 
-      - name: Build hyp and aboot firmware
-        run: sudo sh -e scripts/build_hyp_aboot.sh
+      - name: Build rootfs
+        run: sudo sh -e scripts/generate_alpine_rootfs.sh ./files
+      
+      - name: Build images
+        run: 	sudo sh -e ./scripts/generate_images.sh ./files
+      
+      - name: Build firmware and GPT table
+        run: sudo sh -e ./scripts/generate_firmware.sh files/firmware.zip
 
-      - name: Extract MSM8916 firmware
-        run: sudo sh -e scripts/extract_fw.sh
-
-      - name: Create rootfs
-        run: sudo sh -e scripts/alpine_rootfs.sh
-
-      - name: Create images
-        run: sudo sh -e scripts/build_images.sh
+      - name: Generate GPT table
+        run: sudo sh -e ./scripts/generate_gpt_table.sh files/gpt_both0.bin
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: openstick-alpine
+          name: msm8916-alpine
           path: files/*
