@@ -354,8 +354,4 @@ On first boot, the system will automatically:
 
 ## Credits
 
-- Alpine Linux Project
-- postmarketOS Project
-- Qualcomm MSM8916 mainline developers
-- Linux USB Gadget subsystem
-- NetworkManager project
+- @kinsamanka (https://github.com/kinsamanka/OpenStick-Builder): For almost all the project.
