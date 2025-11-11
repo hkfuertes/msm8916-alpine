@@ -12,7 +12,7 @@ powersave=2
 
 [wifi-security]
 key-mgmt=wpa-psk
-psk=Yomecomo1perritoperono1deverdad*
+psk=__PASS__
 
 [ipv4]
 method=auto
