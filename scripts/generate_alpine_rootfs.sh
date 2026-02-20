@@ -17,6 +17,7 @@ PMOS_MIRROR="${PMOS_MIRROR:-http://mirror.postmarketos.org/postmarketos}"
 
 USERNAME="${USERNAME:-user}"
 DTB_FILE="${DTB_FILE:-msm8916-yiming-uz801v3.dtb}"
+USB0_IP="${USB0_IP:-192.168.42.1/24}"
 
 # Required: password must be set
 [ -z "${PASSWORD:-}" ] && {
@@ -199,14 +200,23 @@ if [ -n "${WIFI_SSID:-}" ]; then
     sed -i "s/__PASS__/${WIFI_PASS:-}/g" "$CHROOT/etc/NetworkManager/system-connections/wlan.nmconnection"
 fi
 
+# Configure usb0 connection
 mkdir -p "$CHROOT/etc/NetworkManager/dnsmasq-shared.d"
-cat > "$CHROOT/etc/NetworkManager/dnsmasq-shared.d/usb0.conf" << 'EOF'
+USB0_CONN="$CHROOT/etc/NetworkManager/system-connections/usb0.nmconnection"
+if [ "${USB0_IP}" = "dhcp" ]; then
+    echo "[*] USB0: DHCP client mode"
+    sed -i "s|method=shared|method=auto|g; /address1=/d" "$USB0_CONN"
+else
+    echo "[*] USB0: static ${USB0_IP}"
+    sed -i "s|__USB0_IP__|${USB0_IP}|g" "$USB0_CONN"
+    cat > "$CHROOT/etc/NetworkManager/dnsmasq-shared.d/usb0.conf" << 'EOF'
 # Don't send default gateway (option 3) via DHCP
 dhcp-option=3
 
 # Only send IP address and DNS
 interface=usb0
 EOF
+fi
 
 # DTBs: compiled (files/dtbs/) take priority, then precompiled (dtbs/)
 mkdir -p "$CHROOT/boot/dtbs/qcom"
@@ -241,6 +251,13 @@ chroot "$CHROOT" ash -l -c "rc-update add usb-gadget default" || true
 install -Dm0755 configs/expand-rootfs/expand-rootfs.sh "$CHROOT/usr/sbin/expand-rootfs.sh"
 install -Dm0755 configs/expand-rootfs/expand-rootfs.init "$CHROOT/etc/init.d/expand-rootfs"
 chroot "$CHROOT" ash -l -c "rc-update add expand-rootfs boot" || true
+
+# Copy portainer compose to user home for first boot
+if [ -f "stacks/portainer.docker-compose.yml" ]; then
+    echo "[*] Copying portainer docker-compose.yml..."
+    cp stacks/portainer.docker-compose.yml "$CHROOT/home/${USERNAME}/docker-compose.yml"
+    chroot "$CHROOT" ash -l -c "chown ${USERNAME}:${USERNAME} /home/${USERNAME}/docker-compose.yml"
+fi
 
 # Create tarball
 echo "[*] Creating tarball..."
