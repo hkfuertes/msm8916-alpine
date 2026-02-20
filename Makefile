@@ -6,12 +6,19 @@ builder:
 dts:
 	./scripts/generate_dts.sh ./files
 
-build:
-	# Run inside builder!
+_check-docker:
+	@[ -f /.dockerenv ] || { echo "ERROR: Run this target inside the builder container (make builder)"; exit 1; }
+
+clean: _check-docker
+	rm -rf files .kernel-dts saved
+
+build: _check-docker
 	rm -rf files
 	mkdir -p files
 	./scripts/generate_dts.sh ./files
 	./scripts/generate_alpine_rootfs.sh ./files
 	./scripts/generate_images.sh ./files
+
+build-all: build
 	./scripts/generate_firmware.sh files/firmware.zip
 	./scripts/generate_gpt_table.sh files/gpt_both0.bin
