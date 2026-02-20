@@ -31,11 +31,11 @@ mkdir -p "$DTB_OUT"
 # ---------------------------------------------------------------------------
 if [ ! -d "$KERNEL_CACHE/.git" ]; then
     echo "[*] Cloning kernel DTS tree (sparse, this may take a moment)..."
-    git clone --filter=blob:none --sparse --depth=1 "$KERNEL_REPO" "$KERNEL_CACHE"
+    git clone --sparse --depth=1 "$KERNEL_REPO" "$KERNEL_CACHE"
     git -C "$KERNEL_CACHE" sparse-checkout set \
         arch/arm64/boot/dts/qcom \
-        include/dt-bindings
-    git -C "$KERNEL_CACHE" checkout
+        include/dt-bindings \
+        include/uapi/linux
     echo "[+] Kernel DTS tree cached in $KERNEL_CACHE"
 else
     echo "[*] Using cached kernel DTS tree ($KERNEL_CACHE)"
