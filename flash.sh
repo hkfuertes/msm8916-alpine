@@ -163,21 +163,28 @@ if [[ "$LITE_MODE" == false ]]; then
     edl e boot || { echo "[-] Error rebooting to fastboot"; exit 1; }
     edl reset || { echo "[-] Error resetting device"; exit 1; }
 else
-    # In lite mode, just wait for fastboot
     echo
     echo "=== Waiting for fastboot ==="
-    echo "[*] Please put device in fastboot mode manually"
+    if fastboot devices | grep -qE "fastboot$"; then
+        echo "[+] Device already in fastboot"
+    elif lsusb | grep -q "05c6:9008"; then
+        echo "[*] Device detected in EDL mode — switching to fastboot..."
+        edl e boot || { echo "[-] Error booting to fastboot"; exit 1; }
+        edl reset  || { echo "[-] Error resetting device"; exit 1; }
+    else
+        echo "[*] Device not detected — please put it in fastboot mode manually"
+    fi
 fi
 
 # Wait for fastboot to come up.
-echo "[*] Waiting for fastboot mode (up to 10s)..."
-for i in {1..10}; do
+echo "[*] Waiting for fastboot mode (up to 30s)..."
+for i in {1..30}; do
     if fastboot devices | grep -qE "fastboot$"; then
         echo "[+] Fastboot device detected"
         break
     fi
     sleep 1
-    if [[ $i -eq 10 ]]; then
+    if [[ $i -eq 30 ]]; then
         echo "[-] Error: Fastboot device not detected"
         exit 1
     fi
