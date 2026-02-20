@@ -1,4 +1,5 @@
-#!/bin/sh -e
+#!/bin/bash
+set -euo pipefail
 # Creates GPT table for MSM8916 eMMC
 # Total disk: 0x748000 sectors (7634944 sectors = 3.64 GB)
 # rootfs partition automatically extends to end of disk

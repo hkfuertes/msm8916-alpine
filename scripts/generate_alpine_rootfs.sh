@@ -1,4 +1,5 @@
-#!/bin/sh -e
+#!/bin/bash
+set -euo pipefail
 
 [ -f ./variables.env ] && source ./variables.env
 
@@ -8,14 +9,20 @@ OUT_DIR="${1:-"$WORKDIR/files"}"
 STAGING="$(mktemp -d)"
 CHROOT="$STAGING/rootfs"
 
-HOST_NAME="${HOST_NAME:=uz801a}"
-RELEASE="${RELEASE:=v3.20}"
-PMOS_RELEASE="${PMOS_RELEASE:=v24.12}"
-MIRROR="${MIRROR:=http://dl-cdn.alpinelinux.org/alpine}"
-PMOS_MIRROR="${PMOS_MIRROR:=http://mirror.postmarketos.org/postmarketos}"
+HOST_NAME="${HOST_NAME:-uz801a}"
+RELEASE="${RELEASE:-v3.20}"
+PMOS_RELEASE="${PMOS_RELEASE:-v24.12}"
+MIRROR="${MIRROR:-http://dl-cdn.alpinelinux.org/alpine}"
+PMOS_MIRROR="${PMOS_MIRROR:-http://mirror.postmarketos.org/postmarketos}"
 
-USERNAME="${USERNAME:=user}"
-PASSWORD="${PASSWORD:=1}"
+USERNAME="${USERNAME:-user}"
+DTB_FILE="${DTB_FILE:-msm8916-yiming-uz801v3.dtb}"
+
+# Required: password must be set
+[ -z "${PASSWORD:-}" ] && {
+    echo "ERROR: PASSWORD not set. Copy variables.env.example to variables.env and set a password."
+    exit 1
+}
 
 # Cleanup on exit
 trap 'rm -rf "$STAGING"' EXIT INT TERM
@@ -185,6 +192,13 @@ mkdir -p "$CHROOT/etc/NetworkManager/system-connections"
 cp configs/network-manager/*.nmconnection "$CHROOT/etc/NetworkManager/system-connections/" 2>/dev/null || true
 chmod 0600 "$CHROOT/etc/NetworkManager/system-connections/"* 2>/dev/null || true
 
+# Substitute WiFi placeholders if credentials are provided
+if [ -n "${WIFI_SSID:-}" ]; then
+    echo "[*] Configuring WiFi connection (SSID: ${WIFI_SSID})"
+    sed -i "s/__SSID__/${WIFI_SSID}/g" "$CHROOT/etc/NetworkManager/system-connections/wlan.nmconnection"
+    sed -i "s/__PASS__/${WIFI_PASS:-}/g" "$CHROOT/etc/NetworkManager/system-connections/wlan.nmconnection"
+fi
+
 mkdir -p "$CHROOT/etc/NetworkManager/dnsmasq-shared.d"
 cat > "$CHROOT/etc/NetworkManager/dnsmasq-shared.d/usb0.conf" << 'EOF'
 # Don't send default gateway (option 3) via DHCP
@@ -194,9 +208,10 @@ dhcp-option=3
 interface=usb0
 EOF
 
-# Custom DTBs
+# DTBs: compiled (files/dtbs/) take priority, then precompiled (dtbs/)
 mkdir -p "$CHROOT/boot/dtbs/qcom"
-cp dtbs/* "$CHROOT/boot/dtbs/qcom/" 2>/dev/null || true
+cp "$OUT_DIR/dtbs/"*.dtb "$CHROOT/boot/dtbs/qcom/" 2>/dev/null || true
+cp dtbs/*.dtb "$CHROOT/boot/dtbs/qcom/" 2>/dev/null || true
 
 mkdir -p "$CHROOT/boot/extlinux"
 cat > "$CHROOT/boot/extlinux/extlinux.conf" <<EOF
@@ -206,7 +221,7 @@ DEFAULT alpine
 LABEL alpine
     MENU LABEL Alpine Linux
     linux /vmlinuz
-    fdt /dtbs/qcom/msm8916-generic-uf02.dtb
+    fdt /dtbs/qcom/${DTB_FILE}
     append earlycon root=/dev/mmcblk0p14 console=ttyMSM0,115200 no_framebuffer=true rw rootwait
 EOF
 
@@ -250,6 +265,7 @@ echo "    - Kernel: linux-postmarketos-qcom-msm8916 from ${PMOS_RELEASE}"
 echo "    - Docker: enabled and configured"
 echo "    - Chrony: enabled with NTP servers"
 echo "    - User '${USERNAME}' in docker group"
+echo "    - DTB: ${DTB_FILE}"
 echo "    - $OUT_DIR/rootfs/ (directory)"
 echo "    - $OUT_DIR/rootfs.tgz (tarball)"
 ls -lh "$OUT_DIR/rootfs.tgz"
