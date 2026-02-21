@@ -41,7 +41,7 @@ chmod +x "$BIN_PATH"
 echo "$LATEST" > "$INSTALL_DIR/version"
 
 # Preserve existing command_args across updates (e.g. -webserv, custom flags)
-EXISTING_ARGS="-port=:8000"
+EXISTING_ARGS="-port=:8000 -mdnsname zoraxy"
 if [ -f "$INIT_SCRIPT" ]; then
     SAVED=$(grep '^command_args=' "$INIT_SCRIPT" | cut -d'"' -f2)
     [ -n "$SAVED" ] && EXISTING_ARGS="$SAVED"

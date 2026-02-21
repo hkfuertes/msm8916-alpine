@@ -2,6 +2,7 @@
 set -euo pipefail
 
 INSTALL_DIR="/opt/homer"
+HTML_DIR="$INSTALL_DIR/html"
 VERSION_FILE="$INSTALL_DIR/version"
 
 # Must run as root
@@ -25,34 +26,34 @@ fi
 DOWNLOAD_URL="https://github.com/bastienwirtz/homer/releases/download/${LATEST}/homer.zip"
 
 echo "[*] Downloading Homer ${LATEST}..."
-mkdir -p "$INSTALL_DIR"
+mkdir -p "$HTML_DIR"
 wget -O "$INSTALL_DIR/homer.zip" "$DOWNLOAD_URL"
 
 echo "[*] Extracting..."
-unzip -o "$INSTALL_DIR/homer.zip" -d "$INSTALL_DIR"
+unzip -o "$INSTALL_DIR/homer.zip" -d "$HTML_DIR"
 rm "$INSTALL_DIR/homer.zip"
 
 # Create default config if not present (preserve user customization on updates)
-if [ ! -f "$INSTALL_DIR/assets/config.yml" ]; then
+if [ ! -f "$HTML_DIR/assets/config.yml" ]; then
     echo "[*] Creating default config..."
-    cp "$INSTALL_DIR/assets/config.yml.dist" "$INSTALL_DIR/assets/config.yml"
+    cp "$HTML_DIR/assets/config.yml.dist" "$HTML_DIR/assets/config.yml"
 fi
 
 echo "$LATEST" > "$VERSION_FILE"
 
 echo "[+] Done! Homer $LATEST ready."
-echo "    Path   : $INSTALL_DIR"
-echo "    Config : $INSTALL_DIR/assets/config.yml"
+echo "    Path   : $HTML_DIR"
+echo "    Config : $HTML_DIR/assets/config.yml"
 
-# Configure Zoraxy to serve Homer's static files via -webserv flag
+# Configure Zoraxy to serve Homer's static files via -webroot flag
 ZORAXY_INIT="/etc/init.d/zoraxy"
 if [ -f "$ZORAXY_INIT" ]; then
-    if grep -q "\-webserv" "$ZORAXY_INIT"; then
-        echo "[*] Zoraxy already has -webserv flag, updating path..."
-        sed -i "s|-webserv [^ ]*|-webserv $INSTALL_DIR|" "$ZORAXY_INIT"
+    if grep -q "\-webroot" "$ZORAXY_INIT"; then
+        echo "[*] Zoraxy already has -webroot flag, updating path..."
+        sed -i "s|-webroot [^ ]*|-webroot $INSTALL_DIR|" "$ZORAXY_INIT"
     else
-        echo "[*] Adding -webserv flag to Zoraxy init script..."
-        sed -i "s|command_args=\"\(.*\)\"|command_args=\"\1 -webserv $INSTALL_DIR\"|" "$ZORAXY_INIT"
+        echo "[*] Adding -webroot flag to Zoraxy init script..."
+        sed -i "s|command_args=\"\(.*\)\"|command_args=\"\1 -webroot $INSTALL_DIR\"|" "$ZORAXY_INIT"
     fi
 
     if rc-service zoraxy status &>/dev/null; then
