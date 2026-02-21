@@ -1,0 +1,11 @@
+services:
+  zoraxy:
+    image: zoraxydocker/zoraxy:latest
+    container_name: zoraxy
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - zoraxy_data:/opt/zoraxy/config
+
+volumes:
+  zoraxy_data:

@@ -1,5 +1,5 @@
 [connection]
-id=Strongs
+id=__SSID__
 uuid=f9ab6583-91df-496f-90a8-639bd3253a28
 type=wifi
 autoconnect=true
@@ -7,7 +7,7 @@ interface-name=wlan0
 
 [wifi]
 mode=infrastructure
-ssid=Strongs
+ssid=__SSID__
 powersave=2
 
 [wifi-security]

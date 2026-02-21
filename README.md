@@ -27,26 +27,36 @@ Alpine Linux rootfs builder for MSM8916-based devices (dongles and MiFi routers)
 
 ### variables.env
 
-Edit `variables.env` to customize your build:
+Copy `variables.env.example` to `variables.env` and edit to customize your build:
 
 ```bash
-# System configuration
-HOST_NAME="uf02a"
-USERNAME="user"
-PASSWORD="yourpassword"
+cp variables.env.example variables.env
 ```
+
+```bash
+HOST_NAME="uz801a"
+USERNAME="user"
+PASSWORD="changeme"          # Required — build fails if not set
+WIFI_SSID="MyNetwork"        # Optional — WiFi SSID to connect to
+WIFI_PASS="MyPassword"       # Optional — WiFi password
+DTB_FILE="msm8916-yiming-uz801v3.dtb"   # DTB to use in extlinux.conf
+
+# Optional mirror overrides
+RELEASE="v3.20"
+PMOS_RELEASE="v24.12"
+```
+
+`variables.env` is git-ignored so your credentials are never committed.
 
 ### WiFi Configuration
 
-Edit `configs/network-manager/wlan.nmconnection`:
+Set `WIFI_SSID` and `WIFI_PASS` in `variables.env`. The build will substitute them
+into the NetworkManager connection automatically.
 
-```ini
-[wifi]
-ssid=YourSSID
+### DTB Selection
 
-[wifi-security]
-psk=YourPassword
-```
+Set `DTB_FILE` in `variables.env` to select which compiled DTB the bootloader uses.
+See `dtbs/readme.md` for available options.
 
 ### USB Gadget Configuration
 
@@ -79,6 +89,40 @@ usb-gadget status
 # Apply changes
 rc-service usb-gadget restart
 ```
+
+## Custom Device Trees
+
+The build system can compile DTS (Device Tree Source) files from the upstream Linux kernel
+and from the local `dts/` directory.
+
+### Upstream DTS (auto-compiled)
+
+`make build` automatically fetches the kernel DTS tree (cached in `.kernel-dts/`) and
+compiles these upstream files:
+
+- `msm8916-yiming-uz801v3.dts`
+- `msm8916-thwc-uf896.dts`
+- `msm8916-thwc-ufi001c.dts`
+
+### Custom DTS
+
+Add your own `.dts` files to the `dts/` directory. They are compiled with the same flags
+and include paths as the upstream files, so you can reference kernel DTSI files:
+
+```dts
+// dts/msm8916-mydevice.dts
+/dts-v1/;
+#include "msm8916-ufi.dtsi"
+// ... your customizations
+```
+
+Compile only DTS (without full build):
+
+```bash
+make dts
+```
+
+Output goes to `files/dtbs/`. See `dtbs/readme.md` for the list of precompiled fallback DTBs.
 
 ## Usage
 
@@ -223,9 +267,7 @@ Pre-installed and configured with overlay2 storage driver.
     "max-file": "3"
   },
   "storage-driver": "overlay2",
-  "iptables": true,
-  "bridge": "docker0",
-  "fixed-cidr": "172.17.0.0/16"
+  "iptables": true
 }
 ```
 

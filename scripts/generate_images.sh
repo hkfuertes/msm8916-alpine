@@ -1,4 +1,5 @@
-#!/bin/sh -e
+#!/bin/bash
+set -euo pipefail
 
 # Paths
 WORKDIR="$(pwd)"
@@ -42,7 +43,7 @@ tar xf "$ROOTFS_TAR" -C "$STAGING/mnt" \
     2>/dev/null || true
 
 echo "[*] Boot partition contents:"
-ls -lhR "$STAGING/mnt/" | head -30
+ls -lhR "$STAGING/mnt/" | head -30 || true
 
 umount "$STAGING/mnt"
 

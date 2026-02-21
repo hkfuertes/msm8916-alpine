@@ -2,6 +2,15 @@ name: Build
 
 on:
   workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  PASSWORD: "alpine-ci"
+  WIFI_SSID: "test"
+  WIFI_PASS: "testpass"
+  DTB_FILE: "msm8916-yiming-uz801v3.dtb"
 
 jobs:
   build:
@@ -13,17 +22,22 @@ jobs:
       - name: Install dependencies
         run: sudo sh -e scripts/install_dependencies.sh
 
+      - name: Compile DTS
+        run: |
+          mkdir -p files
+          sudo ./scripts/generate_dts.sh ./files
+
       - name: Build rootfs
-        run: sudo sh -e scripts/generate_alpine_rootfs.sh ./files
-      
+        run: sudo -E bash scripts/generate_alpine_rootfs.sh ./files
+
       - name: Build images
-        run: 	sudo sh -e ./scripts/generate_images.sh ./files
-      
-      - name: Build firmware and GPT table
-        run: sudo sh -e ./scripts/generate_firmware.sh files/firmware.zip
+        run: sudo bash ./scripts/generate_images.sh ./files
+
+      - name: Build firmware
+        run: sudo bash ./scripts/generate_firmware.sh files/firmware.zip
 
       - name: Generate GPT table
-        run: sudo sh -e ./scripts/generate_gpt_table.sh files/gpt_both0.bin
+        run: sudo bash ./scripts/generate_gpt_table.sh files/gpt_both0.bin
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -34,3 +48,16 @@ jobs:
             files/gpt_both0.bin
             files/rootfs.bin
             files/boot.bin
+
+      - name: Create release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            files/firmware.zip \
+            files/gpt_both0.bin \
+            files/rootfs.bin \
+            files/boot.bin \
+            --title "Release ${{ github.ref_name }}" \
+            --generate-notes

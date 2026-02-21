@@ -9,3 +9,6 @@ files
 mnt
 rootfs
 variables.env
+.kernel-dts/
+homer.yml
+pr_description.md

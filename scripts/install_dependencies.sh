@@ -9,6 +9,7 @@ apt install -y --no-install-recommends \
     automake \
     binfmt-support \
     cmake \
+    cpp \
     debian-archive-keyring \
     debootstrap \
     mmdebstrap \
@@ -24,10 +25,9 @@ apt install -y --no-install-recommends \
     python3-pyasn1-modules \
     python3-pycryptodome \
     qemu-user-static \
+    ca-certificates \
+    gnupg \
     unzip \
-    wget 
-
-apt-get install -y --no-install-recommends \
-    mmdebstrap qemu-user-static debian-archive-keyring ca-certificates gnupg
+    wget
 
 rm -rf /var/lib/apt/lists/*

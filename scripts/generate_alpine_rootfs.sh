@@ -1,4 +1,5 @@
-#!/bin/sh -e
+#!/bin/bash
+set -euo pipefail
 
 [ -f ./variables.env ] && source ./variables.env
 
@@ -8,14 +9,21 @@ OUT_DIR="${1:-"$WORKDIR/files"}"
 STAGING="$(mktemp -d)"
 CHROOT="$STAGING/rootfs"
 
-HOST_NAME="${HOST_NAME:=uz801a}"
-RELEASE="${RELEASE:=v3.20}"
-PMOS_RELEASE="${PMOS_RELEASE:=v24.12}"
-MIRROR="${MIRROR:=http://dl-cdn.alpinelinux.org/alpine}"
-PMOS_MIRROR="${PMOS_MIRROR:=http://mirror.postmarketos.org/postmarketos}"
+HOST_NAME="${HOST_NAME:-uz801a}"
+RELEASE="${RELEASE:-v3.21}"
+PMOS_RELEASE="${PMOS_RELEASE:-v25.06}"
+MIRROR="${MIRROR:-http://dl-cdn.alpinelinux.org/alpine}"
+PMOS_MIRROR="${PMOS_MIRROR:-http://mirror.postmarketos.org/postmarketos}"
 
-USERNAME="${USERNAME:=user}"
-PASSWORD="${PASSWORD:=1}"
+USERNAME="${USERNAME:-user}"
+DTB_FILE="${DTB_FILE:-msm8916-yiming-uz801v3.dtb}"
+USB0_IP="${USB0_IP:-192.168.42.1/24}"
+
+# Required: password must be set
+[ -z "${PASSWORD:-}" ] && {
+    echo "ERROR: PASSWORD not set. Copy variables.env.example to variables.env and set a password."
+    exit 1
+}
 
 # Cleanup on exit
 trap 'rm -rf "$STAGING"' EXIT INT TERM
@@ -54,42 +62,33 @@ chmod a+x "$STAGING/apk.static"
 echo "[*] Bootstrapping Alpine Linux..."
 "$STAGING/apk.static" add -p "$CHROOT" --initdb -U --arch aarch64 --allow-untrusted alpine-base
 
-# Install packages
 echo "[*] Installing packages..."
 chroot "$CHROOT" ash -l -c "
-apk add --no-cache --allow-untrusted postmarketos-keys
-apk add --no-cache \
-    bridge-utils \
-    chrony \
-    docker \
-    docker-cli-compose \
-    docker-openrc \
-    dropbear \
-    eudev \
-    iptables \
-    linux-postmarketos-qcom-msm8916 \
-    modemmanager \
-    msm-firmware-loader \
-    nano \
-    networkmanager-cli \
-    networkmanager-tui \
-    networkmanager-wifi \
-    networkmanager-wwan \
-    networkmanager-dnsmasq \
+apk add --no-cache --no-interactive --allow-untrusted postmarketos-keys
+apk add --no-cache --no-interactive \
     openrc \
-    rmtfs \
-    shadow \
-    sudo \
-    udev-init-scripts \
-    udev-init-scripts-openrc \
-    wireguard-tools \
-    wireguard-tools-wg-quick \
+    eudev udev-init-scripts udev-init-scripts-openrc \
+    shadow sudo \
     e2fsprogs e2fsprogs-extra \
-    neofetch \
-    htop \
+    linux-postmarketos-qcom-msm8916 \
+    msm-firmware-loader \
+    rmtfs \
+    modemmanager \
+    networkmanager networkmanager-cli networkmanager-wifi networkmanager-wwan networkmanager-dnsmasq \
     wpa_supplicant \
+    iptables \
+    dropbear \
+    networkmanager-tui \
+    nano \
     bash bash-completion
 "
+
+# Install extra packages from variables.env
+if [ -n "${PACKAGES:-}" ]; then
+    _PKG_LIST="$(echo "$PACKAGES" | tr '\n' ' ' | tr -s ' ')"
+    echo "[*] Installing extra packages..."
+    chroot "$CHROOT" ash -l -c "apk add --no-cache --no-interactive ${_PKG_LIST}"
+fi
 
 # Setup Alpine
 echo "[*] Setting up Alpine..."
@@ -120,13 +119,15 @@ rc-update add mount-ro shutdown
 rc-update add killprocs shutdown
 rc-update add savecache shutdown
 
-# Enable application services
-rc-update add chronyd default
-rc-update add docker default
+# Enable essential application services
 rc-update add dropbear default
 rc-update add modemmanager default
 rc-update add networkmanager default
 rc-update add rmtfs default
+rc-update add local default
+
+# Enable extra services from variables.env
+$(for svc in ${SERVICES_AUTOSTART:-}; do echo "rc-update add $svc default"; done)
 "
 
 # Sudo config
@@ -173,7 +174,7 @@ EOF
 
 # Enable autologin on console
 sed -i '/^tty/ s/^/#/' "$CHROOT/etc/inittab"
-echo 'ttyMSM0::respawn:/bin/sh' >> "$CHROOT/etc/inittab"
+echo 'ttyMSM0::respawn:/bin/bash' >> "$CHROOT/etc/inittab"
 
 # Hostname
 echo "$HOST_NAME" > "$CHROOT/etc/hostname"
@@ -185,18 +186,35 @@ mkdir -p "$CHROOT/etc/NetworkManager/system-connections"
 cp configs/network-manager/*.nmconnection "$CHROOT/etc/NetworkManager/system-connections/" 2>/dev/null || true
 chmod 0600 "$CHROOT/etc/NetworkManager/system-connections/"* 2>/dev/null || true
 
+# Substitute WiFi placeholders if credentials are provided
+if [ -n "${WIFI_SSID:-}" ]; then
+    echo "[*] Configuring WiFi connection (SSID: ${WIFI_SSID})"
+    sed -i "s/__SSID__/${WIFI_SSID}/g" "$CHROOT/etc/NetworkManager/system-connections/wlan.nmconnection"
+    sed -i "s/__PASS__/${WIFI_PASS:-}/g" "$CHROOT/etc/NetworkManager/system-connections/wlan.nmconnection"
+fi
+
+# Configure usb0 connection
 mkdir -p "$CHROOT/etc/NetworkManager/dnsmasq-shared.d"
-cat > "$CHROOT/etc/NetworkManager/dnsmasq-shared.d/usb0.conf" << 'EOF'
+USB0_CONN="$CHROOT/etc/NetworkManager/system-connections/usb0.nmconnection"
+if [ "${USB0_IP}" = "dhcp" ]; then
+    echo "[*] USB0: DHCP client mode"
+    sed -i "s|method=shared|method=auto|g; /address1=/d" "$USB0_CONN"
+else
+    echo "[*] USB0: static ${USB0_IP}"
+    sed -i "s|__USB0_IP__|${USB0_IP}|g" "$USB0_CONN"
+    cat > "$CHROOT/etc/NetworkManager/dnsmasq-shared.d/usb0.conf" << 'EOF'
 # Don't send default gateway (option 3) via DHCP
 dhcp-option=3
 
 # Only send IP address and DNS
 interface=usb0
 EOF
+fi
 
-# Custom DTBs
+# DTBs: compiled (files/dtbs/) take priority, then precompiled (dtbs/)
 mkdir -p "$CHROOT/boot/dtbs/qcom"
-cp dtbs/* "$CHROOT/boot/dtbs/qcom/" 2>/dev/null || true
+cp "$OUT_DIR/dtbs/"*.dtb "$CHROOT/boot/dtbs/qcom/" 2>/dev/null || true
+cp dtbs/*.dtb "$CHROOT/boot/dtbs/qcom/" 2>/dev/null || true
 
 mkdir -p "$CHROOT/boot/extlinux"
 cat > "$CHROOT/boot/extlinux/extlinux.conf" <<EOF
@@ -206,7 +224,7 @@ DEFAULT alpine
 LABEL alpine
     MENU LABEL Alpine Linux
     linux /vmlinuz
-    fdt /dtbs/qcom/msm8916-generic-uf02.dtb
+    fdt /dtbs/qcom/${DTB_FILE}
     append earlycon root=/dev/mmcblk0p14 console=ttyMSM0,115200 no_framebuffer=true rw rootwait
 EOF
 
@@ -226,6 +244,29 @@ chroot "$CHROOT" ash -l -c "rc-update add usb-gadget default" || true
 install -Dm0755 configs/expand-rootfs/expand-rootfs.sh "$CHROOT/usr/sbin/expand-rootfs.sh"
 install -Dm0755 configs/expand-rootfs/expand-rootfs.init "$CHROOT/etc/init.d/expand-rootfs"
 chroot "$CHROOT" ash -l -c "rc-update add expand-rootfs boot" || true
+
+# zram swap (compressed in-RAM swap, ~256MB effective headroom)
+echo "[*] Configuring zram swap..."
+mkdir -p "$CHROOT/etc/local.d"
+cat > "$CHROOT/etc/local.d/zram.start" << 'EOF'
+#!/bin/sh
+modprobe zram
+echo 1 > /sys/block/zram0/reset
+echo lz4 > /sys/block/zram0/comp_algorithm
+echo 256M > /sys/block/zram0/disksize
+mkswap /dev/zram0
+swapon /dev/zram0
+EOF
+chmod +x "$CHROOT/etc/local.d/zram.start"
+
+# Copy install scripts to user home for first boot
+for script in stacks/install-*.sh; do
+    [ -f "$script" ] || continue
+    name="$(basename "$script")"
+    echo "[*] Copying $name..."
+    cp "$script" "$CHROOT/home/${USERNAME}/$name"
+    chroot "$CHROOT" ash -l -c "chmod +x /home/${USERNAME}/$name && chown ${USERNAME}:${USERNAME} /home/${USERNAME}/$name"
+done
 
 # Create tarball
 echo "[*] Creating tarball..."
@@ -250,6 +291,7 @@ echo "    - Kernel: linux-postmarketos-qcom-msm8916 from ${PMOS_RELEASE}"
 echo "    - Docker: enabled and configured"
 echo "    - Chrony: enabled with NTP servers"
 echo "    - User '${USERNAME}' in docker group"
+echo "    - DTB: ${DTB_FILE}"
 echo "    - $OUT_DIR/rootfs/ (directory)"
 echo "    - $OUT_DIR/rootfs.tgz (tarball)"
 ls -lh "$OUT_DIR/rootfs.tgz"
