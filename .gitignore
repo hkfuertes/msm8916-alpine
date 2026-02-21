@@ -10,3 +10,4 @@ mnt
 rootfs
 variables.env
 .kernel-dts/
+homer.yml

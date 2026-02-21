@@ -124,6 +124,7 @@ rc-update add dropbear default
 rc-update add modemmanager default
 rc-update add networkmanager default
 rc-update add rmtfs default
+rc-update add local default
 
 # Enable extra services from variables.env
 $(for svc in ${SERVICES_AUTOSTART:-}; do echo "rc-update add $svc default"; done)
@@ -244,12 +245,27 @@ install -Dm0755 configs/expand-rootfs/expand-rootfs.sh "$CHROOT/usr/sbin/expand-
 install -Dm0755 configs/expand-rootfs/expand-rootfs.init "$CHROOT/etc/init.d/expand-rootfs"
 chroot "$CHROOT" ash -l -c "rc-update add expand-rootfs boot" || true
 
-# Copy Zoraxy install script to user home for first boot
-if [ -f "stacks/install-zoraxy.sh" ]; then
-    echo "[*] Copying install-zoraxy.sh..."
-    cp stacks/install-zoraxy.sh "$CHROOT/home/${USERNAME}/install-zoraxy.sh"
-    chroot "$CHROOT" ash -l -c "chmod +x /home/${USERNAME}/install-zoraxy.sh && chown ${USERNAME}:${USERNAME} /home/${USERNAME}/install-zoraxy.sh"
-fi
+# zram swap (compressed in-RAM swap, ~256MB effective headroom)
+echo "[*] Configuring zram swap..."
+mkdir -p "$CHROOT/etc/local.d"
+cat > "$CHROOT/etc/local.d/zram.start" << 'EOF'
+#!/bin/sh
+modprobe zram
+echo lz4 > /sys/block/zram0/comp_algorithm
+echo 256M > /sys/block/zram0/disksize
+mkswap /sys/block/zram0
+swapon /sys/block/zram0
+EOF
+chmod +x "$CHROOT/etc/local.d/zram.start"
+
+# Copy install scripts to user home for first boot
+for script in stacks/install-*.sh; do
+    [ -f "$script" ] || continue
+    name="$(basename "$script")"
+    echo "[*] Copying $name..."
+    cp "$script" "$CHROOT/home/${USERNAME}/$name"
+    chroot "$CHROOT" ash -l -c "chmod +x /home/${USERNAME}/$name && chown ${USERNAME}:${USERNAME} /home/${USERNAME}/$name"
+done
 
 # Create tarball
 echo "[*] Creating tarball..."

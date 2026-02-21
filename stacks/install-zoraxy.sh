@@ -40,15 +40,22 @@ mv "${BIN_PATH}.tmp" "$BIN_PATH"
 chmod +x "$BIN_PATH"
 echo "$LATEST" > "$INSTALL_DIR/version"
 
+# Preserve existing command_args across updates (e.g. -webserv, custom flags)
+EXISTING_ARGS="-port=:8000"
+if [ -f "$INIT_SCRIPT" ]; then
+    SAVED=$(grep '^command_args=' "$INIT_SCRIPT" | cut -d'"' -f2)
+    [ -n "$SAVED" ] && EXISTING_ARGS="$SAVED"
+fi
+
 # Create/update init script
 echo "[*] Writing OpenRC init script..."
-cat > "$INIT_SCRIPT" << 'EOF'
+cat > "$INIT_SCRIPT" << EOF
 #!/sbin/openrc-run
 
 name="zoraxy"
 description="Zoraxy reverse proxy"
 command="/opt/zoraxy/zoraxy"
-command_args="-port=:8000"
+command_args="${EXISTING_ARGS}"
 command_background=true
 pidfile="/run/zoraxy.pid"
 directory="/opt/zoraxy"
