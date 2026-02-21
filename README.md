@@ -4,17 +4,20 @@ Alpine Linux rootfs builder for MSM8916-based devices (dongles and MiFi routers)
 
 ## Features
 
-- **Alpine Linux v3.20** with postmarketOS edge kernel (6.12.1+)
+- **Alpine Linux v3.21** with postmarketOS v25.06 kernel (6.12+)
 - **USB Gadget Mode**: NCM (Linux/Mac) or RNDIS (Windows) networking
 - **Direct USB Networking**: Simple usb0 interface with DHCP (no bridge complexity)
 - **WiFi Client**: WPA2 support via NetworkManager
 - **LTE Modem**: ModemManager with QMI support (MSM8916 cellular)
 - **Docker**: Pre-installed with user in docker group
-- **NTP Sync**: Chrony for time synchronization
+- **NTP Sync**: Chrony for time synchronization (optional, via `PACKAGES`)
+- **zram Swap**: Compressed in-RAM swap (~256MB effective headroom)
 - **Auto-expand rootfs**: First boot partition and filesystem expansion
 - **Dropbear SSH**: Lightweight SSH server
-- **WireGuard**: VPN support built-in
+- **WireGuard**: VPN support (optional, via `PACKAGES`)
 - **OTG Host Mode**: Optional USB host mode for peripherals
+- **Zoraxy**: Reverse proxy with HTTPS and web dashboard (optional)
+- **Homer**: Static dashboard served by Zoraxy (optional)
 
 ## Requirements
 
@@ -40,27 +43,52 @@ PASSWORD="changeme"          # Required — build fails if not set
 WIFI_SSID="MyNetwork"        # Optional — WiFi SSID to connect to
 WIFI_PASS="MyPassword"       # Optional — WiFi password
 DTB_FILE="msm8916-yiming-uz801v3.dtb"   # DTB to use in extlinux.conf
+USB0_IP="192.168.42.1/24"   # Static IP for USB gadget (with DHCP server)
+                             # Set to "dhcp" when plugged into a router (OpenWrt, etc.)
 
 # Optional mirror overrides
-RELEASE="v3.20"
-PMOS_RELEASE="v24.12"
+RELEASE="v3.21"
+PMOS_RELEASE="v25.06"
+# MIRROR="http://dl-cdn.alpinelinux.org/alpine"
+# PMOS_MIRROR="http://mirror.postmarketos.org/postmarketos"
+
+# Extra packages to install (essentials are hardcoded in the script)
+PACKAGES="
+chrony
+zoraxy
+wireguard-tools
+wireguard-tools-wg-quick
+neofetch
+htop
+"
+
+# Extra services to auto-start (essentials are hardcoded in the script)
+SERVICES_AUTOSTART="
+chronyd
+zoraxy
+"
 ```
 
 `variables.env` is git-ignored so your credentials are never committed.
 
 ### WiFi Configuration
 
-Set `WIFI_SSID` and `WIFI_PASS` in `variables.env`. The build will substitute them
-into the NetworkManager connection automatically.
+Set `WIFI_SSID` and `WIFI_PASS` in `variables.env`. The build will substitute them into the NetworkManager connection automatically.
 
 ### DTB Selection
 
-Set `DTB_FILE` in `variables.env` to select which compiled DTB the bootloader uses.
-See `dtbs/readme.md` for available options.
+Set `DTB_FILE` in `variables.env` to select which compiled DTB the bootloader uses. See `dtbs/readme.md` for available options.
+
+### USB0 IP Mode
+
+`USB0_IP` controls how the USB gadget interface is configured:
+
+- **Static IP** (default): `USB0_IP="192.168.42.1/24"` — acts as a DHCP server for the connected host.
+- **DHCP client**: `USB0_IP="dhcp"` — useful when the device is plugged into a router (e.g. OpenWrt) that assigns IPs.
 
 ### USB Gadget Configuration
 
-USB gadget uses simple configuration file `/etc/usb-gadget.conf`:
+USB gadget uses a simple configuration file `/etc/usb-gadget.conf`:
 
 ```bash
 # MSM8916 USB Gadget Configuration
@@ -92,13 +120,11 @@ rc-service usb-gadget restart
 
 ## Custom Device Trees
 
-The build system can compile DTS (Device Tree Source) files from the upstream Linux kernel
-and from the local `dts/` directory.
+The build system can compile DTS (Device Tree Source) files from the upstream Linux kernel and from the local `dts/` directory.
 
 ### Upstream DTS (auto-compiled)
 
-`make build` automatically fetches the kernel DTS tree (cached in `.kernel-dts/`) and
-compiles these upstream files:
+`make build` automatically fetches the kernel DTS tree (cached in `.kernel-dts/`) and compiles these upstream files:
 
 - `msm8916-yiming-uz801v3.dts`
 - `msm8916-thwc-uf896.dts`
@@ -106,8 +132,7 @@ compiles these upstream files:
 
 ### Custom DTS
 
-Add your own `.dts` files to the `dts/` directory. They are compiled with the same flags
-and include paths as the upstream files, so you can reference kernel DTSI files:
+Add your own `.dts` files to the `dts/` directory. They are compiled with the same flags and include paths as the upstream files, so you can reference kernel DTSI files:
 
 ```dts
 // dts/msm8916-mydevice.dts
@@ -132,15 +157,19 @@ Output goes to `files/dtbs/`. See `dtbs/readme.md` for the list of precompiled f
 # Create builder container (first time only)
 make builder
 
-# Build all images (rootfs, boot, recovery, GPT, firmware.zip)
+# Build rootfs + boot image
 make build
+
+# Build everything including firmware.zip and GPT table
+make build-all
 ```
 
 **Build output** in `files/`:
 - `rootfs.bin` - Alpine rootfs sparse image
+- `rootfs.tgz` - Alpine rootfs tarball
 - `boot.bin` - Kernel + initramfs boot image
-- `gpt_both0.bin` - GPT partition table for 4GB eMMC
-- `firmware.zip` - Complete firmware package
+- `gpt_both0.bin` - GPT partition table for 4GB eMMC (with `build-all`)
+- `firmware.zip` - Complete firmware package (with `build-all`)
 
 ### 2. Flash to device via EDL
 
@@ -180,6 +209,59 @@ Username: user
 Password: (configured in variables.env)
 ```
 
+## Optional Stacks
+
+The `stacks/` directory contains install scripts and Docker Compose files for optional services. Install scripts are automatically copied to `~/` on the device during the build, ready to run after first boot.
+
+### Zoraxy (Reverse Proxy)
+
+Zoraxy provides a reverse proxy with HTTPS termination and a web admin panel. It can be installed as a native service or as a Docker container.
+
+**Native install (recommended for low memory):**
+```bash
+sudo ~/install-zoraxy.sh
+```
+
+- Admin panel: `http://<device-ip>:8000`
+- Config: `/opt/zoraxy/config/`
+- Service: `rc-service zoraxy start|stop|restart`
+
+**Docker install:**
+```bash
+docker compose -f stacks/zoraxy.docker-compose.yml up -d
+```
+
+### Homer (Dashboard)
+
+Homer is a lightweight static homepage served by Zoraxy's built-in web server.
+
+```bash
+sudo ~/install-homer.sh
+```
+
+- Installs to `/opt/homer/html/`
+- Automatically configures Zoraxy to serve it via `-webroot`
+- Config: `/opt/homer/html/assets/config.yml`
+
+Re-run the script to update to the latest Homer release. User config is preserved on updates.
+
+### Portainer (Docker UI)
+
+```bash
+docker compose -f stacks/portainer.docker-compose.yml up -d
+```
+
+- Web UI: `http://<device-ip>:9000`
+
+### Watchtower (Auto-update containers)
+
+```bash
+docker compose -f stacks/watchtower.docker-compose.yml up -d
+```
+
+- Checks for container updates daily at 04:00
+- Automatically pulls and restarts updated containers
+
 ## Components
 
 ### USB Gadget
@@ -195,12 +277,12 @@ The device exposes itself as a USB network adapter when connected to a PC.
 - **No default route**: Host traffic stays on primary network
 
 **Features:**
-- ✅ Plug-and-play networking
-- ✅ Automatic DHCP without extra dnsmasq
-- ✅ No bridge complexity
-- ✅ Doesn't steal host's default route
-- ✅ Switchable NCM/RNDIS modes
-- ✅ OTG Host mode support
+- Plug-and-play networking
+- Automatic DHCP without extra dnsmasq
+- No bridge complexity
+- Doesn't steal host's default route
+- Switchable NCM/RNDIS modes
+- OTG Host mode support
 
 **Service control:**
 ```bash
@@ -223,7 +305,6 @@ usb-gadget enable_otg    # USB Host mode
 - **IP**: 192.168.42.1/24
 - **DHCP Range**: 192.168.42.10-192.168.42.100
 - **Gateway**: Not advertised (host keeps existing default route)
-- **DNS**: Optional, configurable
 
 NetworkManager configuration in `/etc/NetworkManager/system-connections/usb0.nmconnection`:
 ```ini
@@ -273,15 +354,14 @@ Pre-installed and configured with overlay2 storage driver.
 
 **Usage:**
 ```bash
-# Check version
 docker --version
-
-# Run test container
 docker run hello-world
-
-# View containers
 docker ps -a
 ```
+
+### zram Swap
+
+A 256MB compressed in-RAM swap device is configured automatically at boot via `/etc/local.d/zram.start`. This uses the lz4 algorithm and effectively provides ~256MB of extra memory headroom on constrained devices.
 
 ### LTE Modem
 
@@ -303,10 +383,7 @@ mmcli -m 0 --simple-status
 
 **Manual connection:**
 ```bash
-# Connect to network
 nmcli connection up lte
-
-# Check IP
 ip addr show wwan0qmi0
 ```
 
@@ -316,7 +393,7 @@ Dropbear SSH server on port 22.
 
 **Default credentials:**
 - Username: `user` (or configured in variables.env)
-- Password: Configured in variables.env
+- Password: configured in variables.env
 - Sudo: NOPASSWD enabled
 
 **Connect:**
@@ -334,11 +411,9 @@ ssh user@192.168.42.1
 
 **Best for:** Linux and macOS
 
-**Features:**
 - High performance
 - Native driver support in Linux 2.6.31+, macOS 10.9+
 - No driver installation needed
-- Supports up to 1 Gbps theoretical speed
 
 **Enable:**
 ```bash
@@ -350,11 +425,8 @@ rc-service usb-gadget restart
 
 **Best for:** Windows
 
-**Features:**
 - Native Windows driver support
 - Plug-and-play on Windows 7+
-- Compatible with Android
-- Lower performance than NCM
 
 **Enable:**
 ```bash
@@ -366,7 +438,6 @@ rc-service usb-gadget restart
 
 **Best for:** USB peripherals (flash drives, keyboards, etc.)
 
-**Features:**
 - Enables USB host functionality
 - Disables USB gadget mode
 - Requires USB OTG adapter
@@ -377,20 +448,21 @@ usb-gadget enable_otg
 rc-service usb-gadget restart
 ```
 
-**Warning:** WiFi or LTE connectivity required for remote access when in OTG mode!
+> **Warning:** WiFi or LTE connectivity required for remote access when in OTG mode.
 
 ## First Boot
 
 On first boot, the system will automatically:
 
-1. ✅ Expand rootfs partition to fill eMMC
-2. ✅ Resize ext4 filesystem
-3. ✅ Start all services (NetworkManager, Docker, ModemManager, etc.)
-4. ✅ Connect to configured WiFi
-5. ✅ Create USB gadget (NCM interface)
-6. ✅ Configure usb0 with IP 192.168.42.1/24
-7. ✅ Start DHCP server on usb0
-8. ✅ Sync time via Chrony
+1. Expand rootfs partition to fill eMMC
+2. Resize ext4 filesystem
+3. Start all services (NetworkManager, Docker, ModemManager, etc.)
+4. Connect to configured WiFi
+5. Create USB gadget (NCM interface)
+6. Configure usb0 with IP 192.168.42.1/24
+7. Start DHCP server on usb0
+8. Enable zram swap
+9. Sync time via Chrony (if installed)
 
 **Boot time:** ~30-45 seconds to full network connectivity
 
