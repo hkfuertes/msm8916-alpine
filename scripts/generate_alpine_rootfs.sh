@@ -251,10 +251,11 @@ mkdir -p "$CHROOT/etc/local.d"
 cat > "$CHROOT/etc/local.d/zram.start" << 'EOF'
 #!/bin/sh
 modprobe zram
+echo 1 > /sys/block/zram0/reset
 echo lz4 > /sys/block/zram0/comp_algorithm
 echo 256M > /sys/block/zram0/disksize
-mkswap /sys/block/zram0
-swapon /sys/block/zram0
+mkswap /dev/zram0
+swapon /dev/zram0
 EOF
 chmod +x "$CHROOT/etc/local.d/zram.start"
 
