@@ -62,42 +62,33 @@ chmod a+x "$STAGING/apk.static"
 echo "[*] Bootstrapping Alpine Linux..."
 "$STAGING/apk.static" add -p "$CHROOT" --initdb -U --arch aarch64 --allow-untrusted alpine-base
 
-# Install packages
 echo "[*] Installing packages..."
 chroot "$CHROOT" ash -l -c "
-apk add --no-cache --allow-untrusted postmarketos-keys
-apk add --no-cache \
-    bridge-utils \
-    chrony \
-    docker \
-    docker-cli-compose \
-    docker-openrc \
-    dropbear \
-    eudev \
-    iptables \
-    linux-postmarketos-qcom-msm8916 \
-    modemmanager \
-    msm-firmware-loader \
-    nano \
-    networkmanager-cli \
-    networkmanager-tui \
-    networkmanager-wifi \
-    networkmanager-wwan \
-    networkmanager-dnsmasq \
+apk add --no-cache --no-interactive --allow-untrusted postmarketos-keys
+apk add --no-cache --no-interactive \
     openrc \
-    rmtfs \
-    shadow \
-    sudo \
-    udev-init-scripts \
-    udev-init-scripts-openrc \
-    wireguard-tools \
-    wireguard-tools-wg-quick \
+    eudev udev-init-scripts udev-init-scripts-openrc \
+    shadow sudo \
     e2fsprogs e2fsprogs-extra \
-    neofetch \
-    htop \
+    linux-postmarketos-qcom-msm8916 \
+    msm-firmware-loader \
+    rmtfs \
+    modemmanager \
+    networkmanager networkmanager-cli networkmanager-wifi networkmanager-wwan networkmanager-dnsmasq \
     wpa_supplicant \
+    iptables \
+    dropbear \
+    networkmanager-tui \
+    nano \
     bash bash-completion
 "
+
+# Install extra packages from variables.env
+if [ -n "${PACKAGES:-}" ]; then
+    _PKG_LIST="$(echo "$PACKAGES" | tr '\n' ' ' | tr -s ' ')"
+    echo "[*] Installing extra packages..."
+    chroot "$CHROOT" ash -l -c "apk add --no-cache --no-interactive ${_PKG_LIST}"
+fi
 
 # Setup Alpine
 echo "[*] Setting up Alpine..."
@@ -128,13 +119,14 @@ rc-update add mount-ro shutdown
 rc-update add killprocs shutdown
 rc-update add savecache shutdown
 
-# Enable application services
-rc-update add chronyd default
-rc-update add docker default
+# Enable essential application services
 rc-update add dropbear default
 rc-update add modemmanager default
 rc-update add networkmanager default
 rc-update add rmtfs default
+
+# Enable extra services from variables.env
+$(for svc in ${SERVICES_AUTOSTART:-}; do echo "rc-update add $svc default"; done)
 "
 
 # Sudo config
@@ -181,7 +173,7 @@ EOF
 
 # Enable autologin on console
 sed -i '/^tty/ s/^/#/' "$CHROOT/etc/inittab"
-echo 'ttyMSM0::respawn:/bin/sh' >> "$CHROOT/etc/inittab"
+echo 'ttyMSM0::respawn:/bin/bash' >> "$CHROOT/etc/inittab"
 
 # Hostname
 echo "$HOST_NAME" > "$CHROOT/etc/hostname"
@@ -252,11 +244,11 @@ install -Dm0755 configs/expand-rootfs/expand-rootfs.sh "$CHROOT/usr/sbin/expand-
 install -Dm0755 configs/expand-rootfs/expand-rootfs.init "$CHROOT/etc/init.d/expand-rootfs"
 chroot "$CHROOT" ash -l -c "rc-update add expand-rootfs boot" || true
 
-# Copy portainer compose to user home for first boot
-if [ -f "stacks/portainer.docker-compose.yml" ]; then
-    echo "[*] Copying portainer docker-compose.yml..."
-    cp stacks/portainer.docker-compose.yml "$CHROOT/home/${USERNAME}/docker-compose.yml"
-    chroot "$CHROOT" ash -l -c "chown ${USERNAME}:${USERNAME} /home/${USERNAME}/docker-compose.yml"
+# Copy Zoraxy install script to user home for first boot
+if [ -f "stacks/install-zoraxy.sh" ]; then
+    echo "[*] Copying install-zoraxy.sh..."
+    cp stacks/install-zoraxy.sh "$CHROOT/home/${USERNAME}/install-zoraxy.sh"
+    chroot "$CHROOT" ash -l -c "chmod +x /home/${USERNAME}/install-zoraxy.sh && chown ${USERNAME}:${USERNAME} /home/${USERNAME}/install-zoraxy.sh"
 fi
 
 # Create tarball

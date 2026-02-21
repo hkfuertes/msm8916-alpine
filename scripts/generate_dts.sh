@@ -38,7 +38,9 @@ if [ ! -d "$KERNEL_CACHE/.git" ]; then
         include/uapi/linux
     echo "[+] Kernel DTS tree cached in $KERNEL_CACHE"
 else
-    echo "[*] Using cached kernel DTS tree ($KERNEL_CACHE)"
+    echo "[*] Updating cached kernel DTS tree..."
+    git -C "$KERNEL_CACHE" fetch --depth=1 origin
+    git -C "$KERNEL_CACHE" reset --hard FETCH_HEAD
 fi
 
 DTS_QCOM="$KERNEL_CACHE/arch/arm64/boot/dts/qcom"
