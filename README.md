@@ -23,7 +23,7 @@ Alpine Linux rootfs builder for MSM8916-based devices (dongles and MiFi routers)
 
 ### Host System
 
-- **Docker** (for building in isolated environment)
+- **Vagrant** + **QEMU** (for local builds: `brew install vagrant qemu && vagrant plugin install vagrant-qemu`)
 - **Python 3** with `edl` tool (for flashing via EDL mode)
 
 ## Configuration
@@ -151,17 +151,21 @@ Output goes to `files/dtbs/`. See `dtbs/readme.md` for the list of precompiled f
 
 ## Usage
 
-### 1. Build everything (Docker)
+### 1. Build everything
 
 ```bash
-# Create builder container (first time only)
+# Open a shell in the builder VM (first time provisions automatically)
 make builder
 
-# Build rootfs + boot image
+# Inside the VM: build rootfs + boot image
 make build
 
-# Build everything including firmware.zip and GPT table
+# Or build everything including firmware.zip and GPT table
 make build-all
+
+# Exit the VM, then fetch artifacts to your Mac
+exit
+make fetch
 ```
 
 **Build output** in `files/`:

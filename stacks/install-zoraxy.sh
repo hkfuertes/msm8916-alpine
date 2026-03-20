@@ -34,14 +34,15 @@ fi
 DOWNLOAD_URL="https://github.com/tobychui/zoraxy/releases/download/${LATEST}/zoraxy_linux_${ARCH}"
 
 echo "[*] Downloading binary..."
-mkdir -p "$INSTALL_DIR"
+mkdir -p "$INSTALL_DIR" "$INSTALL_DIR/conf" "$INSTALL_DIR/log" "$INSTALL_DIR/tmp"
+chmod 0750 "$INSTALL_DIR"
 wget -O "${BIN_PATH}.tmp" "$DOWNLOAD_URL"
 mv "${BIN_PATH}.tmp" "$BIN_PATH"
 chmod +x "$BIN_PATH"
 echo "$LATEST" > "$INSTALL_DIR/version"
 
 # Preserve existing command_args across updates (e.g. -webserv, custom flags)
-EXISTING_ARGS="-port=:8000 -mdnsname zoraxy"
+EXISTING_ARGS="-port=0.0.0.0:8000 -mdnsname zoraxy"
 if [ -f "$INIT_SCRIPT" ]; then
     SAVED=$(grep '^command_args=' "$INIT_SCRIPT" | cut -d'"' -f2)
     [ -n "$SAVED" ] && EXISTING_ARGS="$SAVED"

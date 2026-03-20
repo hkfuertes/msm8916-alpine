@@ -30,7 +30,13 @@ trap 'rm -rf "$STAGING"' EXIT INT TERM
 
 # Validations
 [ -d "$OUT_DIR" ] || mkdir -p "$OUT_DIR"
-command -v qemu-aarch64-static >/dev/null || { echo "Falta qemu-aarch64-static"; exit 1; }
+HOST_ARCH="$(uname -m)"
+IS_ARM64=false
+[ "$HOST_ARCH" = "aarch64" ] || [ "$HOST_ARCH" = "arm64" ] && IS_ARM64=true
+
+if [ "$IS_ARM64" = "false" ]; then
+    command -v qemu-aarch64-static >/dev/null || { echo "Falta qemu-aarch64-static"; exit 1; }
+fi
 
 echo "[*] Output directory: $OUT_DIR"
 echo "[*] Temporary staging: $STAGING"
@@ -49,13 +55,20 @@ EOF
 # Copy DNS config
 cp /etc/resolv.conf "$CHROOT/etc/"
 
-# Copy QEMU static
+# Copy QEMU static (only needed when cross-building)
 mkdir -p "$CHROOT/usr/bin"
-cp $(which qemu-aarch64-static) "$CHROOT/usr/bin/"
+if [ "$IS_ARM64" = "false" ]; then
+    cp $(which qemu-aarch64-static) "$CHROOT/usr/bin/"
+fi
 
 # Download and use apk.static
 echo "[*] Downloading apk.static..."
-wget -q https://gitlab.alpinelinux.org/api/v4/projects/5/packages/generic/v2.14.6/x86_64/apk.static -O "$STAGING/apk.static"
+if [ "$IS_ARM64" = "true" ]; then
+    APK_STATIC_ARCH="aarch64"
+else
+    APK_STATIC_ARCH="x86_64"
+fi
+wget -q "https://gitlab.alpinelinux.org/api/v4/projects/5/packages/generic/v2.14.6/${APK_STATIC_ARCH}/apk.static" -O "$STAGING/apk.static"
 chmod a+x "$STAGING/apk.static"
 
 # Bootstrap Alpine
@@ -80,7 +93,8 @@ apk add --no-cache --no-interactive \
     dropbear \
     networkmanager-tui \
     nano \
-    bash bash-completion
+    bash bash-completion \
+    ca-certificates
 "
 
 # Install extra packages from variables.env
@@ -186,11 +200,14 @@ mkdir -p "$CHROOT/etc/NetworkManager/system-connections"
 cp configs/network-manager/*.nmconnection "$CHROOT/etc/NetworkManager/system-connections/" 2>/dev/null || true
 chmod 0600 "$CHROOT/etc/NetworkManager/system-connections/"* 2>/dev/null || true
 
-# Substitute WiFi placeholders if credentials are provided
-if [ -n "${WIFI_SSID:-}" ]; then
+# Substitute WiFi placeholders if WiFi is enabled and credentials are provided
+if [ "${WIFI_ENABLED:-yes}" = "yes" ] && [ -n "${WIFI_SSID:-}" ]; then
     echo "[*] Configuring WiFi connection (SSID: ${WIFI_SSID})"
     sed -i "s/__SSID__/${WIFI_SSID}/g" "$CHROOT/etc/NetworkManager/system-connections/wlan.nmconnection"
     sed -i "s/__PASS__/${WIFI_PASS:-}/g" "$CHROOT/etc/NetworkManager/system-connections/wlan.nmconnection"
+else
+    echo "[*] WiFi disabled or no SSID provided — removing wlan config"
+    rm -f "$CHROOT/etc/NetworkManager/system-connections/wlan.nmconnection"
 fi
 
 # Configure usb0 connection
@@ -202,13 +219,22 @@ if [ "${USB0_IP}" = "dhcp" ]; then
 else
     echo "[*] USB0: static ${USB0_IP}"
     sed -i "s|__USB0_IP__|${USB0_IP}|g" "$USB0_CONN"
-    cat > "$CHROOT/etc/NetworkManager/dnsmasq-shared.d/usb0.conf" << 'EOF'
+    if [ -n "${USB0_GW:-}" ]; then
+        # Client mode: device gets internet through the gateway
+        echo "[*] USB0: gateway ${USB0_GW}, DNS ${USB0_DNS:-8.8.8.8}"
+        sed -i "s|method=shared|method=manual|g" "$USB0_CONN"
+        sed -i "s|never-default=true|gateway=${USB0_GW}|g" "$USB0_CONN"
+        sed -i "/\[ipv4\]/a dns=${USB0_DNS:-8.8.8.8};" "$USB0_CONN"
+    else
+        # Server/shared mode: device acts as router with DHCP
+        cat > "$CHROOT/etc/NetworkManager/dnsmasq-shared.d/usb0.conf" << 'EOF'
 # Don't send default gateway (option 3) via DHCP
 dhcp-option=3
 
 # Only send IP address and DNS
 interface=usb0
 EOF
+    fi
 fi
 
 # DTBs: compiled (files/dtbs/) take priority, then precompiled (dtbs/)

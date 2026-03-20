@@ -1,18 +1,24 @@
 builder:
-	docker build -t builder .
-	docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-	docker run --rm -v ${PWD}:/app -v /tmp:/tmp -w /app -it --privileged builder
+	vagrant up
+	vagrant rsync
+	vagrant ssh -c "cd /app && sudo bash"
+
+fetch:
+	@mkdir -p files
+	vagrant ssh -c "cd /app/files && tar cf - *.img.gz *.zip *.bin dtbs/ 2>/dev/null" | tar xf - -C files/
+	@echo "[+] Fetched to files/:"
+	@ls -lh files/
 
 dts:
 	./scripts/generate_dts.sh ./files
 
-_check-docker:
-	@[ -f /.dockerenv ] || { echo "ERROR: Run this target inside the builder container (make builder)"; exit 1; }
+_check-env:
+	@systemd-detect-virt -q 2>/dev/null || [ -f /proc/1/cgroup ] || { echo "ERROR: Run this inside the builder VM (make builder) or a CI environment"; exit 1; }
 
-clean: _check-docker
+clean: _check-env
 	rm -rf files .kernel-dts saved
 
-build: _check-docker
+build: _check-env
 	rm -rf files
 	mkdir -p files
 	./scripts/generate_dts.sh ./files

@@ -46,8 +46,8 @@ jobs:
           path: |
             files/firmware.zip
             files/gpt_both0.bin
-            files/rootfs.bin
-            files/boot.bin
+            files/rootfs.img.gz
+            files/boot.img.gz
 
       - name: Create release
         if: startsWith(github.ref, 'refs/tags/')
@@ -57,7 +57,7 @@ jobs:
           gh release create "${{ github.ref_name }}" \
             files/firmware.zip \
             files/gpt_both0.bin \
-            files/rootfs.bin \
-            files/boot.bin \
+            files/rootfs.img.gz \
+            files/boot.img.gz \
             --title "Release ${{ github.ref_name }}" \
             --generate-notes

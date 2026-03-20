@@ -17,7 +17,6 @@ BOOT_SIZE_MIB="${BOOT_SIZE_MIB:=64}"
 ROOT_SIZE_MIB="${ROOT_SIZE_MIB:=1536}"
 
 # Requirements
-command -v img2simg >/dev/null || { echo "Falta img2simg"; exit 1; }
 [ -d "$OUT_DIR" ] || { echo "No existe directorio: $OUT_DIR"; exit 1; }
 [ -f "$ROOTFS_TAR" ] || { echo "No existe $ROOTFS_TAR"; exit 1; }
 
@@ -61,11 +60,11 @@ tar xpf "$ROOTFS_TAR" -C "$STAGING/mnt" \
 
 umount "$STAGING/mnt"
 
-# Convert to sparse Android images
-echo "[*] Converting to sparse images..."
-img2simg "$BOOT_RAW" "$OUT_DIR/boot.bin"
-img2simg "$ROOT_RAW" "$OUT_DIR/rootfs.bin"
+# Compress raw images with gzip
+echo "[*] Compressing images..."
+gzip -c "$BOOT_RAW" > "$OUT_DIR/boot.img.gz"
+gzip -c "$ROOT_RAW" > "$OUT_DIR/rootfs.img.gz"
 
 echo "[+] Images created successfully:"
-echo "    - $OUT_DIR/boot.bin ($(du -h "$OUT_DIR/boot.bin" | cut -f1))"
-echo "    - $OUT_DIR/rootfs.bin ($(du -h "$OUT_DIR/rootfs.bin" | cut -f1))"
+echo "    - $OUT_DIR/boot.img.gz ($(du -h "$OUT_DIR/boot.img.gz" | cut -f1))"
+echo "    - $OUT_DIR/rootfs.img.gz ($(du -h "$OUT_DIR/rootfs.img.gz" | cut -f1))"

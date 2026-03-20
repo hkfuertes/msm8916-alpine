@@ -14,13 +14,25 @@ trap 'if [ -n "$CLEANUP_DIR" ]; then rm -rf "$CLEANUP_DIR"; fi' EXIT
 BUILDDIR="$TMPDIR/msm8916-firmware-build"
 mkdir -p "$BUILDDIR"
 
-# Arch Linux standard toolchains (from official repos)
-AARCH64_CROSS="aarch64-linux-gnu-"
-AARCH64_CC="aarch64-linux-gnu-gcc"
-AARCH64_AS="aarch64-linux-gnu-as"
-AARCH64_LD="aarch64-linux-gnu-ld"
-AARCH64_AR="aarch64-linux-gnu-ar"
-AARCH64_OBJCOPY="aarch64-linux-gnu-objcopy"
+# Detect toolchain based on host architecture
+HOST_ARCH="$(uname -m)"
+if [ "$HOST_ARCH" = "aarch64" ] || [ "$HOST_ARCH" = "arm64" ]; then
+    # Native ARM64 — use system compilers directly
+    AARCH64_CROSS=""
+    AARCH64_CC="gcc"
+    AARCH64_AS="as"
+    AARCH64_LD="ld"
+    AARCH64_AR="ar"
+    AARCH64_OBJCOPY="objcopy"
+else
+    # Cross-compile from x86_64
+    AARCH64_CROSS="aarch64-linux-gnu-"
+    AARCH64_CC="aarch64-linux-gnu-gcc"
+    AARCH64_AS="aarch64-linux-gnu-as"
+    AARCH64_LD="aarch64-linux-gnu-ld"
+    AARCH64_AR="aarch64-linux-gnu-ar"
+    AARCH64_OBJCOPY="aarch64-linux-gnu-objcopy"
+fi
 ARM_CROSS="arm-none-eabi-"
 
 # Sanity checks
