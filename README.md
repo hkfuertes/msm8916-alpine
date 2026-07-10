@@ -4,7 +4,7 @@ Alpine Linux rootfs builder for MSM8916-based devices (dongles and MiFi routers)
 
 ## Features
 
-- **Alpine Linux v3.21** with postmarketOS v25.06 kernel (6.12+)
+- **Alpine Linux v3.24** with postmarketOS v26.06 kernel (6.12+)
 - **USB Gadget Mode**: NCM (Linux/Mac) or RNDIS (Windows) networking
 - **Direct USB Networking**: Simple usb0 interface with DHCP (no bridge complexity)
 - **WiFi Client**: WPA2 support via NetworkManager
@@ -50,8 +50,8 @@ USB0_IP="192.168.42.1/24"   # Static IP for USB gadget (with DHCP server)
                              # Set to "dhcp" when plugged into a router (OpenWrt, etc.)
 
 # Optional mirror overrides
-RELEASE="v3.21"
-PMOS_RELEASE="v25.06"
+RELEASE="v3.24"
+PMOS_RELEASE="v26.06"
 # MIRROR="http://dl-cdn.alpinelinux.org/alpine"
 # PMOS_MIRROR="http://mirror.postmarketos.org/postmarketos"
 

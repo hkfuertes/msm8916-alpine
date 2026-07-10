@@ -23,8 +23,8 @@ STAGING="$(mktemp -d)"
 CHROOT="$STAGING/rootfs"
 
 HOST_NAME="${HOST_NAME:-uz801a}"
-RELEASE="${RELEASE:-v3.21}"
-PMOS_RELEASE="${PMOS_RELEASE:-v25.06}"
+RELEASE="${RELEASE:-v3.24}"
+PMOS_RELEASE="${PMOS_RELEASE:-v26.06}"
 MIRROR="${MIRROR:-http://dl-cdn.alpinelinux.org/alpine}"
 PMOS_MIRROR="${PMOS_MIRROR:-http://mirror.postmarketos.org/postmarketos}"
 
@@ -202,7 +202,8 @@ fi
 
 # Chrony configuration
 echo "[*] Configuring Chrony..."
-cat > "$CHROOT/etc/chrony/chrony.conf" <<'CHRONYEOF'
+mkdir -p "$CHROOT/etc/chrony"
+cat > "$CHROOT/etc/chrony/chrony.conf" << CHRONYEOF
 # NTP servers
 server 0.pool.ntp.org iburst
 server 1.pool.ntp.org iburst

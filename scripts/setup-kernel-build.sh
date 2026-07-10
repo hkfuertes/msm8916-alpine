@@ -1,6 +1,6 @@
 #!/bin/bash
 # Setup kernel source tree for out-of-tree module builds against msm8916 pmaports kernel.
-# Pins pmaports v25.06; derives kernel version/tag from the official APKBUILD.
+# Pins pmaports v26.06; derives kernel version/tag from the official APKBUILD.
 # Run inside the builder VM (make builder) or any arm64/amd64 Linux box with
 # the required cross-build deps installed (see build-deps.sh).
 #
@@ -11,7 +11,7 @@
 set -euo pipefail
 
 FLAVOR="postmarketos-qcom-msm8916"
-PMAPORTS_REF="v25.06"
+PMAPORTS_REF="v26.06"
 PMAPORTS_BASE="https://gitlab.postmarketos.org/postmarketOS/pmaports/-/raw/${PMAPORTS_REF}/device/community/linux-${FLAVOR}"
 APKBUILD_URL="${PMAPORTS_BASE}/APKBUILD"
 CONFIG_URL="${PMAPORTS_BASE}/config-${FLAVOR}.aarch64"

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Fast validation of the kernel build environment.
-# Fetches the pmaports APKBUILD (v25.06) to verify pkgver/tag, checks URL reachability.
+# Fetches the pmaports APKBUILD (v26.06) to verify pkgver/tag, checks URL reachability.
 # Does NOT compile anything. Exit 0 = all checks pass; Exit 1 = one or more failures.
 
 set -euo pipefail
@@ -33,11 +33,11 @@ else
 fi
 
 # --- APKBUILD fetch + version/tag verification ---
-info "Fetching pmaports v25.06 APKBUILD to verify pkgver and _tag ..."
-APKBUILD_URL='https://gitlab.postmarketos.org/postmarketOS/pmaports/-/raw/v25.06/device/community/linux-postmarketos-qcom-msm8916/APKBUILD'
+info "Fetching pmaports v26.06 APKBUILD to verify pkgver and _tag ..."
+APKBUILD_URL='https://gitlab.postmarketos.org/postmarketOS/pmaports/-/raw/v26.06/device/community/linux-postmarketos-qcom-msm8916/APKBUILD'
 APKBUILD_TMP="$(mktemp /tmp/validate-apkbuild.XXXXXX)"
 if wget -q -O "$APKBUILD_TMP" "$APKBUILD_URL" 2>/dev/null; then
-    ok "APKBUILD URL reachable (pmaports v25.06)"
+    ok "APKBUILD URL reachable (pmaports v26.06)"
     _pkgver="$(grep '^pkgver=' "$APKBUILD_TMP" | cut -d= -f2 | tr -d '[:space:]')"
     if [ "$_pkgver" = "6.12.1" ]; then
         ok "APKBUILD pkgver=${_pkgver}"
@@ -62,9 +62,9 @@ wget -q --spider 'https://github.com/msm8916-mainline/linux/archive/v6.12.1-msm8
     && ok "kernel source URL reachable (v6.12.1-msm8916)" \
     || fail "kernel source URL not reachable"
 
-wget -q --spider 'https://gitlab.postmarketos.org/postmarketOS/pmaports/-/raw/v25.06/device/community/linux-postmarketos-qcom-msm8916/config-postmarketos-qcom-msm8916.aarch64' 2>/dev/null \
-    && ok "pmaports config URL reachable (v25.06)" \
-    || fail "pmaports config URL not reachable (v25.06)"
+wget -q --spider 'https://gitlab.postmarketos.org/postmarketOS/pmaports/-/raw/v26.06/device/community/linux-postmarketos-qcom-msm8916/config-postmarketos-qcom-msm8916.aarch64' 2>/dev/null \
+    && ok "pmaports config URL reachable (v26.06)" \
+    || fail "pmaports config URL not reachable (v26.06)"
 
 # --- Config fragment: USB serial printer drivers (issue-003) ---
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
